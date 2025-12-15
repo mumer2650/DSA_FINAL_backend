@@ -1,0 +1,32 @@
+### Python Environment/Venv ###
+# Virtual Environment
+venv/
+.venv/
+env/
+.env/
+
+# Python cache files
+__pycache__/
+*.pyc
+
+### Django Specific ###
+# SQLite database file
+db.sqlite3
+
+# Media and static files (often generated/uploaded)
+/media/
+/static_collected/
+
+# Any configuration files that contain secrets
+*.env
+
+### OS and Editor Files ###
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+
+# Common editor directories/files
+.vscode/
+.idea/
