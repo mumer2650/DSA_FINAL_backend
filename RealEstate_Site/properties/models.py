@@ -32,6 +32,10 @@ class Property(models.Model):
     # Status
     listing_type = models.CharField(max_length=20, choices=[('SALE', 'For Sale'), ('RENT', 'For Rent')])
     created_at = models.DateTimeField(auto_now_add=True)
-
+    
+    # for house images
+    image = models.ImageField(upload_to='property_images/', blank=True, null=True)
+# for this images to work we will need to install pillow (pip install pillow ) left for discussion in lab
+    
     def __str__(self):
         return f"{self.title} - ${self.price}"
