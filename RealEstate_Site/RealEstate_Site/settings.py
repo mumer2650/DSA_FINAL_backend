@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'rest_framework', 
 
     'users',
+    'listing',
     'properties',
     'maps',
     'blueprints',
@@ -117,6 +118,8 @@ SIMPLE_JWT = {
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
+
+MEDIA_DIR = BASE_DIR / 'media'
 
 
 LANGUAGE_CODE = 'en-us'
