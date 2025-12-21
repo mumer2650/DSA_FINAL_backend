@@ -7,7 +7,7 @@ class Property(models.Model):
     size = models.IntegerField()
     bedrooms = models.IntegerField()
     bathrooms = models.IntegerField()
-    image = models.ImageField(upload_to='properties/')
+    image = models.ImageField(upload_to='media/properties/')
     location_id = models.IntegerField()
     created_at = models.DateTimeField(auto_now_add=True)
     
