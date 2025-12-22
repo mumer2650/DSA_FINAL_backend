@@ -144,14 +144,14 @@ class AVL_Tree_Property:
         if node is None:
             return
         
-        if node.price > min_p:
+        if node.key > min_p:
             self._range_search_recursive(node.left, min_p, max_p, search_list)
 
-        if min_p <= node.price <= max_p:
+        if min_p <= node.key <= max_p:
             for p in node.properties:
                 search_list.append(p)
 
-        if node.price < max_p:
+        if node.key < max_p:
             self._range_search_recursive(node.right, min_p, max_p, search_list)      
             
                 
