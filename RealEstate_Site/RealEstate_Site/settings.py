@@ -37,10 +37,11 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
+    'cloudinary_storage',
     'django.contrib.staticfiles',
     'rest_framework_simplejwt',
     'rest_framework',
-    'corsheaders', 
+    'corsheaders',
 
     'users',
     'listing',
@@ -48,6 +49,22 @@ INSTALLED_APPS = [
     'maps',
     'blueprints',
 ]
+
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': 'dzhenpsrc',
+    'API_KEY': '448334817389874',
+    'API_SECRET': '8JMdSFlGU-5OLwjKDMB_thlDUD4',
+    'SECURE': True
+}
+
+STORAGES = {
+    "default": {
+        "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+    },
+}
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
@@ -123,8 +140,8 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
-MEDIA_DIR = BASE_DIR / 'media'
 
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
 LANGUAGE_CODE = 'en-us'
 

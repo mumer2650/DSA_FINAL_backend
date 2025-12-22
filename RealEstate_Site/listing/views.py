@@ -69,3 +69,29 @@ def get_sorted_by_size(request):
     serializer = PropertySerializer(data,many=True)    
     return Response(serializer.data, status=status.HTTP_200_OK)
 
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def advanced_search(request):
+    
+    min_p = float(request.query_params.get('min_price', 0))
+    max_p = float(request.query_params.get('max_price', 999999999))
+    
+    min_s = int(request.query_params.get('min_size', 0))
+    max_s = int(request.query_params.get('max_size', 999999999))
+    
+    min_bed = int(request.query_params.get('min_bedrooms', 0))
+
+    from .trees import property_tree
+    initial_candidates = property_tree.search_by_price_range(min_p, max_p)
+
+    filtered_results = []
+    for prop in initial_candidates:
+        size_ok = min_s <= prop.size <= max_s
+        bed_ok = prop.bedrooms >= min_bed
+        
+        if size_ok and bed_ok:
+            filtered_results.append(prop)
+
+    from .serializers import PropertySerializer
+    serializer = PropertySerializer(filtered_results, many=True)
+    return Response(serializer.data)
