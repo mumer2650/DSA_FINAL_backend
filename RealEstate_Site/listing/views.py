@@ -17,8 +17,10 @@ def add_property(request):
     if serializer.is_valid():
         new_property = serializer.save()
         
-        from .trees import property_tree
+        from .trees import property_tree,size_tree
         property_tree.insert(new_property)
+        size_tree.insert(new_property)
+        
         
         return Response({
             "message": "Property added",
