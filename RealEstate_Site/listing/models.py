@@ -8,7 +8,7 @@ class Property(models.Model):
     bedrooms = models.IntegerField()
     bathrooms = models.IntegerField()
     image = models.ImageField(upload_to='properties/')
-    location_id = models.IntegerField()
+    location_id = models.ForeignKey('locations.Location', on_delete=models.CASCADE, related_name='properties')
     created_at = models.DateTimeField(auto_now_add=True)
     
     def __str__(self):

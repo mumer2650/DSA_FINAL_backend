@@ -6,7 +6,7 @@ class User(AbstractUser):
         ('admin', 'Admin'),
         ('customer', 'Customer'),
     )
-    role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='buyer')
+    role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='customer')
     is_agent = models.BooleanField(default=False) 
     
     def __str__(self):

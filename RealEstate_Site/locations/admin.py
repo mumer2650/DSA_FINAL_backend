@@ -1,3 +1,6 @@
 from django.contrib import admin
+from .models import Location, Facility, Connection
 
-# Register your models here.
+@admin.register(Connection)
+class ConnectionAdmin(admin.ModelAdmin):
+    list_display = ('from_location', 'to_location', 'distance')
