@@ -7,8 +7,8 @@ class ListingsConfig(AppConfig):
     def ready(self):
         from .models import Property
         from .trees import property_tree,size_tree
-        
-        # Check if we are running the actual server (prevents running during migrations)
+        from .heap import cheap_heap,size_heap
+    
         import sys
         if 'runserver' in sys.argv:
             print("Start: Loading Properties into AVL Tree...")
@@ -17,5 +17,7 @@ class ListingsConfig(AppConfig):
             for p in all_properties:
                 property_tree.insert(p)
                 size_tree.insert(p)
+                cheap_heap.insert(p)
+                size_heap.insert(p)
                 
             print(f"Success: Loaded {property_tree.size} properties into the AVL Tree.")

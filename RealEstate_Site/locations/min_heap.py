@@ -14,7 +14,7 @@ class MinHeap:
         
         root = self.heap[0]
         self.heap[0] = self.heap.pop()
-        self._bubble_down(0)
+        self.heapify_down(0)
         return root
 
     def heapify_up(self, index):
