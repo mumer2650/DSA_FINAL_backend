@@ -2,6 +2,7 @@ from typing import Optional
 from .models import Location, Facility
 from .queues import Queue
 from .priority_queues import PriorityQueue
+from listing.models import Property
 
 
 class LocationGraph:
@@ -93,6 +94,62 @@ class LocationGraph:
                     pq.push(new_dist,neighbor_id)
 
         return float("inf")
+    
+
+class RecomendationGraph:
+    def __init__(self):
+        # format  { prop_id : [(similar_prop_id,number_of_similarities)]}
+        self.adj_list = {}
+    
+    def add_node(self,property_id):
+        if property_id not in self.adj_list:
+            self.adj_list[property_id] = []
+        
+    def add_edge(self,from_id,to_id,number_of_similarities):
+        if from_id in self.adj_list and to_id in self.adj_list: 
+            self.adj_list[from_id].append((to_id,number_of_similarities))
+            self.adj_list[to_id].append((from_id,number_of_similarities))
+            
+    def generate_similarity_graph(self,property_obj : Property):
+        for prop1 in property_obj:
+            for prop2 in property_obj:
+                
+                if prop1.id == prop2.id:
+                    continue
+                    
+                similarities = 0
+                if abs(prop1.price - prop2.price) / prop1.price <= 0.15: similarities += 1
+                if abs(prop1.size - prop2.size) / prop1.size <= 0.15: similarities += 1
+                
+                if similarities >= 1:
+                    self.add_node(prop1.id)
+                    self.add_node(prop2.id)
+                    self.add_edge(prop1.id,prop2.id)
+        return self.adj_list
+
+    def bfs_traversal(self,start_node):
+        q = Queue()
+        visited = set()
+        q.enqueue(start_node)
+        visited.add(start_node)
+        all_recommendations = []
+        
+        while not q.is_empty():
+            curr_id = q.dequeue()
+        
+            neighbors = self.adj_list.get(curr_id, [])
+            
+            for neighbor_id, score in neighbors:
+                if neighbor_id not in visited:
+                    visited.add(neighbor_id)
+                    
+                    all_recommendations.append((neighbor_id, score))
+                    q.enqueue(neighbor_id)
+        
+        return [item[0] for item in all_recommendations]
+            
+        
+                
 
 
 graph = LocationGraph()

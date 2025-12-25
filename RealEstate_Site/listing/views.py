@@ -18,8 +18,12 @@ def add_property(request):
         new_property = serializer.save()
         
         from .trees import property_tree,size_tree
+        from .heap import cheap_heap,size_heap
+        
         property_tree.insert(new_property)
         size_tree.insert(new_property)
+        cheap_heap.insert(new_property)
+        size_heap.insert(new_property)
         
         
         return Response({
