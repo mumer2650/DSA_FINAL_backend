@@ -9,7 +9,7 @@ def get_nearby_facilities(request, prop_id):
     try:
         try:
             target_property = Property.objects.get(id=prop_id)
-            start_location_id = target_property.location_id 
+            start_location_id = target_property.location_id.id
         except Property.DoesNotExist:
             return Response({"error": "Property not found"}, status=status.HTTP_404_NOT_FOUND)
 
@@ -17,7 +17,7 @@ def get_nearby_facilities(request, prop_id):
 
         if not graph:
             return Response({"error": "Graph not initialized"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
+        
         max_dist = float(request.query_params.get('radius', 5.0))
         nearby_facilities = graph.bfs_nearby_facilities(start_location_id, max_dist)
 

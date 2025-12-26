@@ -16,9 +16,14 @@ class LocationsConfig(AppConfig):
             
             for location in locations:
                 graph.add_location(location)
-                
-
+            
             for conn in connections:
                 graph.add_edge(conn.from_location.id, conn.to_location.id, conn.distance)
+                
+            facilities_locations = Location.objects.filter(location_type='facility')
+            
+            for fac_loc in facilities_locations:
+                if not Connection.objects.filter(from_location=fac_loc).exists():
+                    graph.auto_connect_location(fac_loc, radius_km=20.0)
             
             
