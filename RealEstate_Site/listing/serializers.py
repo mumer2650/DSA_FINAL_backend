@@ -10,7 +10,7 @@ class PropertySerializer(serializers.ModelSerializer):
     class Meta:
         model = Property
         fields = [
-            'title', 'price', 'area', 'size', 'bedrooms', 
+            'id', 'title', 'price', 'area', 'size', 'bedrooms', 
             'bathrooms', 'image', 'location_name', 'latitude', 'longitude'
         ]
         
@@ -19,13 +19,14 @@ class PropertySerializer(serializers.ModelSerializer):
         lat = validated_data.pop('latitude')
         lon = validated_data.pop('longitude')
         title = validated_data.get('title')
+        loc_type = "property"
 
         location_obj, created = Location.objects.get_or_create(
             name=loc_name,
-            defaults={'latitude': lat, 'longitude': lon}
+            defaults={'latitude': lat, 'longitude': lon, 'location_type': loc_type}
         )
         
-        exists = Property.objects.filter(location=location_obj, title=title).exists()
+        exists = Property.objects.filter(location_id=location_obj, title=title).exists()
         
         if exists:
             raise serializers.ValidationError({

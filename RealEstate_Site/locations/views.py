@@ -2,6 +2,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 from listing.models import Property
+from listing.serializers import PropertySerializer
 
 @api_view(['GET'])
 def get_nearby_facilities(request, prop_id):
@@ -53,6 +54,7 @@ def get_shortest_path_distance(request):
                 {"error": "Graph is not initialized"}, 
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+        print(graph.adj_list)
             
         distance = graph.dijkstra_shortest_path(from_id,to_id)
 
@@ -78,22 +80,25 @@ def get_shortest_path_distance(request):
 def get_similar_recomendations(request,prop_id):
     try:
         target_property = Property.objects.get(id=prop_id)
+        all_properties = Property.objects.all()
     except Property.DoesNotExist:
         return Response({"error": "Property not found"}, status=status.HTTP_404_NOT_FOUND)
     
     from .graphs import RecomendationGraph
     recommended = RecomendationGraph()
-    recommended.generate_similarity_graph(target_property)
-    similar_ids = recommended.bfs_recommendations(prop_id)
+    recommended.generate_similarity_graph(all_properties)
+    similar_ids = recommended.bfs_traversal(prop_id)
     
     results = []
     for sid in similar_ids:
         p = Property.objects.get(id=sid)
         results.append(p)
+        
+    serialized = PropertySerializer(results,many=True)
 
     return Response({
-        "target_property": target_property.name,
-        "recommendations": results
+        "target_property": target_property.title,
+        "recommendations": serialized.data
     }, status=status.HTTP_200_OK)
     
 @api_view(['GET'])
@@ -115,7 +120,7 @@ def get_top_cheepest(request):
         if item:
             extracted_items.append(item)
 
-    properties = [item[2] for item in extracted_items]
+    properties = [item[1] for item in extracted_items]
     serializer = PropertySerializer(properties, many=True)
 
     for prop in properties:
@@ -145,7 +150,7 @@ def get_largest_sizes(request):
         if item:
             extracted_items.append(item)
 
-    properties = [item[2] for item in extracted_items]
+    properties = [item[1] for item in extracted_items]
     serializer = PropertySerializer(properties, many=True)
 
     for prop in properties:
