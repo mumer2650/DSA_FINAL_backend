@@ -13,8 +13,6 @@ def add_property(request):
     data = request.data    
     serializer = PropertySerializer(data=data)
 
-    print(data)
-    
     if serializer.is_valid():
         new_property = serializer.save()
         
