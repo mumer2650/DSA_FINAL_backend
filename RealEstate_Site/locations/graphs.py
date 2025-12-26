@@ -1,8 +1,9 @@
 from typing import Optional
-from .models import Location, Facility
+from .models import Location, Facility, Connection
 from .queues import Queue
 from .priority_queues import PriorityQueue
 from listing.models import Property
+from .utilis import calculate_haversine
 
 
 class LocationGraph:
@@ -11,23 +12,30 @@ class LocationGraph:
         self.adj_list = {}
         
         self.nodes_data = {}
-        
-        
+           
     def add_location(self, location_obj : Location):
         if location_obj.id not in self.adj_list:
             facility_record = Facility.objects.filter(location=location_obj).first()
             category = facility_record.type if facility_record else ""
             
+            
+            display_name = facility_record.name if facility_record else location_obj.name
+            
             self.adj_list[location_obj.id] = []
             self.nodes_data[location_obj.id] = {
-                "name": location_obj.name,
+                "name": display_name,
                 "type": location_obj.location_type,
                 "category": category   
             }
         
     def add_edge(self, loc_id1, loc_id2, distance):
-        if loc_id1 in self.adj_list and loc_id2 in self.adj_list: 
+        if loc_id1 not in self.adj_list: self.adj_list[loc_id1] = []
+        if loc_id2 not in self.adj_list: self.adj_list[loc_id2] = []
+
+        if not any(neighbor[0] == loc_id2 for neighbor in self.adj_list[loc_id1]):
             self.adj_list[loc_id1].append((loc_id2, distance))
+            
+        if not any(neighbor[0] == loc_id1 for neighbor in self.adj_list[loc_id2]):
             self.adj_list[loc_id2].append((loc_id1, distance))
             
     def bfs_nearby_facilities(self, start_id, max_distance):
@@ -94,6 +102,29 @@ class LocationGraph:
                     pq.push(new_dist,neighbor_id)
 
         return float("inf")
+    
+    def auto_connect_location(self,new_location, radius_km=15.0):
+        other_locations = Location.objects.exclude(id=new_location.id)
+        self.add_location(new_location)
+        for other in other_locations:
+            dist = calculate_haversine(
+                new_location.latitude, new_location.longitude,
+                other.latitude, other.longitude
+            )
+            
+            if dist <= radius_km:
+                Connection.objects.get_or_create(
+                    from_location=new_location,
+                    to_location=other,
+                    defaults={'distance': dist}
+                )
+                Connection.objects.get_or_create(
+                    from_location=other,
+                    to_location=new_location,
+                    defaults={'distance': dist}
+                )
+                self.add_edge(new_location.id,other.id,dist)
+                self.add_edge(other.id,new_location.id,dist)
     
 
 class RecomendationGraph:
