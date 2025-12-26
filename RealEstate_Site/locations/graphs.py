@@ -73,7 +73,7 @@ class LocationGraph:
         visited = set()
 
         while not pq.is_empty():
-            curr_id, curr_dist = pq.pop()
+            curr_dist, curr_id = pq.pop()
             
             if curr_id == to_id:
                 return round(curr_dist, 2)
@@ -110,7 +110,7 @@ class RecomendationGraph:
             self.adj_list[from_id].append((to_id,number_of_similarities))
             self.adj_list[to_id].append((from_id,number_of_similarities))
             
-    def generate_similarity_graph(self,property_obj : Property):
+    def generate_similarity_graph(self,property_obj):
         for prop1 in property_obj:
             for prop2 in property_obj:
                 
@@ -118,13 +118,13 @@ class RecomendationGraph:
                     continue
                     
                 similarities = 0
-                if abs(prop1.price - prop2.price) / prop1.price <= 0.15: similarities += 1
-                if abs(prop1.size - prop2.size) / prop1.size <= 0.15: similarities += 1
+                if abs(prop1.price - prop2.price) / prop1.price <= 0.30: similarities += 1
+                if abs(prop1.size - prop2.size) / prop1.size <= 0.30: similarities += 1
                 
                 if similarities >= 1:
                     self.add_node(prop1.id)
                     self.add_node(prop2.id)
-                    self.add_edge(prop1.id,prop2.id)
+                    self.add_edge(prop1.id,prop2.id,similarities)
         return self.adj_list
 
     def bfs_traversal(self,start_node):
