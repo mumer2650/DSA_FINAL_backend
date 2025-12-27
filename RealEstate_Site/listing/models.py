@@ -1,4 +1,5 @@
 from django.db import models
+from locations.models import Connection
 
 class Property(models.Model):
     title = models.CharField(max_length=50)
@@ -13,3 +14,4 @@ class Property(models.Model):
     
     def __str__(self):
         return self.title
+    

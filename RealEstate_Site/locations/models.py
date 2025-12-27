@@ -4,7 +4,8 @@ from .utilis import calculate_haversine
 class Location(models.Model):
     LOCATION_TYPES = [
         ('property', 'Property'),
-        ('facility', 'Facility')
+        ('facility', 'Facility'),
+        ('way_point', 'Way Point'),
     ]
     name = models.CharField(max_length=100, unique=True)
     latitude = models.FloatField()  
@@ -13,6 +14,22 @@ class Location(models.Model):
     
     def __str__(self):
         return self.name
+    
+class WayPoint(models.Model):
+    NODE_TYPES = [
+        ('waypoint', 'Way Point'),
+        ('intersection', 'Intersection'),
+        ('roundabout', 'Roundabout'),
+    ]
+    location = models.OneToOneField(Location, on_delete=models.CASCADE, primary_key=True)
+    node_type = models.CharField(
+            max_length=20, 
+            choices=NODE_TYPES, 
+            default='waypoint'
+        )
+    
+    def __str__(self):
+        return f"{self.road_name} - ({self.location.id})"
     
     
 class Facility(models.Model):
@@ -44,3 +61,5 @@ class Connection(models.Model):
             self.to_location.latitude, self.to_location.longitude
         )
         super().save(*args, **kwargs)
+        
+    
