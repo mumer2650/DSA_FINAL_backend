@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import get_nearby_facilities,get_shortest_path_distance, get_similar_recomendations,get_largest_sizes,get_top_cheepest
+from .views import get_nearby_facilities,get_shortest_path_distance, get_similar_recomendations,get_largest_sizes,get_top_cheepest,get_all_facilities
 
 
 urlpatterns = [
@@ -8,5 +8,6 @@ urlpatterns = [
     path('recommendations/<int:prop_id>/',get_similar_recomendations, name= 'similar-properties'),
     path('k-cheapest/',get_top_cheepest, name= 'cheap-properties'),
     path('k-largest/',get_largest_sizes, name= 'large-properties'),
+    path('get-facilities/',get_all_facilities, name= 'all_facilities'),
     
 ]

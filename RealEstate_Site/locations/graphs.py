@@ -103,7 +103,7 @@ class LocationGraph:
 
         return float("inf")
     
-    def auto_connect_location(self,new_location, radius_km=15.0):
+    def auto_connect_location(self,new_location, radius_km=5.0):
         other_locations = Location.objects.exclude(id=new_location.id)
         self.add_location(new_location)
         for other in other_locations:
