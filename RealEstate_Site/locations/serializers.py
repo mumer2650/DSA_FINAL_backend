@@ -6,7 +6,7 @@ class FacilitySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Facility
-        fields = ['id', 'name', 'type', 'type_display']
+        fields = ['id', 'name', 'location', 'type_display']
 
 class LocationSerializer(serializers.ModelSerializer):
 

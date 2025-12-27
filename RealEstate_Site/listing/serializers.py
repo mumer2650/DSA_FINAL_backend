@@ -11,7 +11,7 @@ class PropertySerializer(serializers.ModelSerializer):
         model = Property
         fields = [
             'id', 'title', 'price', 'area', 'size', 'bedrooms', 
-            'bathrooms', 'image', 'location_name', 'latitude', 'longitude'
+            'bathrooms', 'image', 'location_id','location_name', 'latitude', 'longitude'
         ]
         
     def create(self, validated_data):
@@ -25,6 +25,9 @@ class PropertySerializer(serializers.ModelSerializer):
             name=loc_name,
             defaults={'latitude': lat, 'longitude': lon, 'location_type': loc_type}
         )
+        from locations.graphs import graph
+        
+        graph.auto_connect_location(location_obj,radius_km=5.0)
         
         exists = Property.objects.filter(location_id=location_obj, title=title).exists()
         

@@ -3,6 +3,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from listing.models import Property
 from listing.serializers import PropertySerializer
+from .models import Facility
+from .serializers import FacilitySerializer
 
 @api_view(['GET'])
 def get_nearby_facilities(request, prop_id):
@@ -30,6 +32,12 @@ def get_nearby_facilities(request, prop_id):
 
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    
+@api_view(['GET'])
+def get_all_facilities(request):
+    facilities = Facility.objects.all()
+    serialized = FacilitySerializer(facilities,many=True)
+    return Response({"data":serialized.data},status=status.HTTP_200_OK)
 
 
 @api_view(['GET'])
@@ -54,7 +62,6 @@ def get_shortest_path_distance(request):
                 {"error": "Graph is not initialized"}, 
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-        print(graph.adj_list)
             
         distance = graph.dijkstra_shortest_path(from_id,to_id)
 

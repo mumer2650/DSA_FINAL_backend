@@ -22,7 +22,7 @@ class LocationAdmin(admin.ModelAdmin):
     def save_model(self, request, obj, form, change):
         obj.location_type = 'facility'
         super().save_model(request, obj, form, change)
-        graph.auto_connect_location(obj, radius_km=10.0)
+        graph.auto_connect_location(obj, radius_km=5.0)
 
     def has_change_permission(self, request, obj=None):
         return super().has_change_permission(request, obj)

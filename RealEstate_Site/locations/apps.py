@@ -11,7 +11,6 @@ class LocationsConfig(AppConfig):
         import sys
         if 'runserver' in sys.argv:
             locations = Location.objects.all()
-            facilities = Facility.objects.all()
             connections = Connection.objects.all()
             
             for location in locations:
@@ -19,11 +18,12 @@ class LocationsConfig(AppConfig):
             
             for conn in connections:
                 graph.add_edge(conn.from_location.id, conn.to_location.id, conn.distance)
+                graph.add_edge(conn.to_location.id,conn.from_location.id, conn.distance)
                 
-            facilities_locations = Location.objects.filter(location_type='facility')
+            #facilities_locations = Location.objects.filter(location_type='facility')
             
-            for fac_loc in facilities_locations:
-                if not Connection.objects.filter(from_location=fac_loc).exists():
-                    graph.auto_connect_location(fac_loc, radius_km=20.0)
+            # for fac_loc in facilities_locations:
+            #     if not Connection.objects.filter(from_location=fac_loc).exists():
+            #         graph.auto_connect_location(fac_loc, radius_km=5.0)
             
             
