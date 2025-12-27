@@ -1,5 +1,4 @@
 import math
-
 def calculate_haversine(lat1, lon1, lat2, lon2):
     R = 6371.0 
     

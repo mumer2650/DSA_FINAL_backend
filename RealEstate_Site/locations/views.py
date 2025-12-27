@@ -3,8 +3,9 @@ from rest_framework.response import Response
 from rest_framework import status
 from listing.models import Property
 from listing.serializers import PropertySerializer
-from .models import Facility
-from .serializers import FacilitySerializer
+from .models import Facility, Location, WayPoint,Connection
+from .serializers import FacilitySerializer, ConnectionBulkSerializer
+from django.db import transaction
 
 @api_view(['GET'])
 def get_nearby_facilities(request, prop_id):
@@ -167,3 +168,56 @@ def get_largest_sizes(request):
         "count": len(serializer.data),
         "largest_properties": serializer.data
     }, status=status.HTTP_200_OK)
+    
+@api_view(['POST'])
+def bulk_add_waypoints(request):
+    waypoint_data_list = request.data  
+    
+    try:
+        with transaction.atomic():  
+            for item in waypoint_data_list:
+                loc = Location.objects.create(
+                    id=item['id'],
+                    name=item['name'],
+                    latitude=item['lat'],
+                    longitude=item['long'],
+                    location_type='way_point'
+                )
+                
+                WayPoint.objects.create(
+                    location=loc,
+                    node_type=item['waypoint_type']
+                )
+                
+        return Response({"message": f"Successfully added {len(waypoint_data_list)} waypoints"}, status=201)
+    
+    except Exception as e:
+        return Response({"error": str(e)}, status=400)
+    
+@api_view(['POST'])
+def bulk_connection_upload(request):
+    if not isinstance(request.data, list):
+        return Response({"error": "Expected a list."}, status=400)
+
+    created_count = 0
+    errors = []
+
+    for item in request.data:
+        from_id = item.get('from_location')
+        to_id = item.get('to_location')
+        
+        try:
+
+            obj, created = Connection.objects.get_or_create(
+                from_location_id=from_id, 
+                to_location_id=to_id
+            )
+            if created:
+                created_count += 1
+        except Exception as e:
+            errors.append({"pair": f"{from_id}-{to_id}", "error": str(e)})
+
+    return Response({
+        "message": f"Processed batch. {created_count} new connections created.",
+        "errors": errors
+    }, status=201)
