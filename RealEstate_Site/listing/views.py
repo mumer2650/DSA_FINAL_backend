@@ -135,6 +135,7 @@ def toggle_favorite(request):
         return Response({"error": str(e)}, status=500)
     
     
+    
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_user_favorites(request):
@@ -147,5 +148,49 @@ def get_user_favorites(request):
 
     properties = Property.objects.filter(id__in=fav_property_ids)
     
+    serializer = PropertySerializer(properties, many=True)
+    return Response(serializer.data)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def property_view(request):
+    user_id = request.user.id
+    property_id = request.data.get('property_id')
+
+    if not property_id:
+        return Response({"error": "property_id is required"}, status=400)
+
+    try:
+        try:
+            prop = Property.objects.get(id=property_id)
+        except Property.DoesNotExist:
+            return Response({"error": "Property not found"}, status=404)
+
+        from .hash_map import recent_view
+        recent_view.add_view(user_id,property_id)
+        
+        serializer = PropertySerializer(prop)
+        return Response({
+            "message": "View recorded in stack",
+            "property": serializer.data
+        }, status=200)
+
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)
+    
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_recent_list(request):
+    user_id = request.user.id
+    from .hash_map import recent_view
+    recent_ids = recent_view.get_history(user_id)
+    
+    properties = []
+    
+    for prop_id in recent_ids:
+        prop = Property.objects.filter(id=prop_id).first()
+        if prop:
+            properties.append(prop) 
+            
     serializer = PropertySerializer(properties, many=True)
     return Response(serializer.data)

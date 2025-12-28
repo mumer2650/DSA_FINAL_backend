@@ -1,4 +1,5 @@
 from .models import Favorite
+from .stack import Stack
 
 class FavoriteHashMap:
     #Format user_id : int as a key and set of prop ids : int as val
@@ -30,6 +31,23 @@ class FavoriteHashMap:
             self.load_user_favorites(user_id)
         
         return list(self._storage.get(user_id, set()))
+    
+class RecentlyViewedProperty:
+    def __init__(self):
+        # Format { user_id : StackObject }
+        self._storage = {}
 
+    def add_view(self, user_id, property_id):
+        if user_id not in self._storage:
+            self._storage[user_id] = Stack(max_size=10)
+        
+        self._storage[user_id].push(property_id)
 
+    def get_history(self, user_id):
+        user_stack = self._storage.get(user_id)
+        if user_stack:
+            return user_stack.get_all()
+        return []
+
+recent_view = RecentlyViewedProperty()
 favorites_map = FavoriteHashMap()
