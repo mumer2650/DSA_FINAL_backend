@@ -1,5 +1,5 @@
 from django.db import models
-from locations.models import Connection
+from users.models import User
 
 class Property(models.Model):
     title = models.CharField(max_length=50)
@@ -15,3 +15,10 @@ class Property(models.Model):
     def __str__(self):
         return self.title
     
+class Favorite(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='favorites')
+    property = models.ForeignKey(Property, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'property')

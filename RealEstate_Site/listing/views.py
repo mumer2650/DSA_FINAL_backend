@@ -5,7 +5,9 @@ from rest_framework.response import Response
 from rest_framework import status
 from users.permissions import IsAdminRole
 from .serializers import PropertySerializer
-from .models import Property
+from .models import Property, Favorite
+import locations.signals
+from .hash_map import favorites_map
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -99,4 +101,51 @@ def advanced_search(request):
 
     from .serializers import PropertySerializer
     serializer = PropertySerializer(filtered_results, many=True)
+    return Response(serializer.data)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def toggle_favorite(request):
+    user_id = request.user.id
+    property_id = request.data.get('property_id')
+
+    if not property_id:
+        return Response({"error": "property_id is required"}, status=400)
+
+    try:
+        if not Property.objects.filter(id=property_id).exists():
+            return Response({"error": "Property not found"}, status=404)
+
+        if favorites_map.is_favorite(user_id, property_id):
+            Favorite.objects.filter(user_id=user_id, property_id=property_id).delete()
+            return Response({
+                "message": "Removed from favorites",
+                "is_favorite": False
+            }, status=status.HTTP_200_OK)
+        
+        else:
+            Favorite.objects.get_or_create(user_id=user_id, property_id=property_id)
+            return Response({
+                "message": "Added to favorites",
+                "is_favorite": True
+            }, status=status.HTTP_201_CREATED)
+
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)
+    
+    
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_user_favorites(request):
+    user_id = request.user.id
+    
+    fav_property_ids = favorites_map.get_all_for_user(user_id)
+
+    if not fav_property_ids:
+        return Response([], status=200)
+
+    properties = Property.objects.filter(id__in=fav_property_ids)
+    
+    serializer = PropertySerializer(properties, many=True)
     return Response(serializer.data)
