@@ -7,6 +7,7 @@ from users.permissions import IsAdminRole
 from .serializers import PropertySerializer
 from .models import Property, Favorite
 import locations.signals
+from django.db import transaction
 from .hash_map import favorites_map
 
 @api_view(['POST'])
@@ -194,3 +195,14 @@ def get_recent_list(request):
             
     serializer = PropertySerializer(properties, many=True)
     return Response(serializer.data)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_recent_searches(request):
+    user_id = request.user.id
+    from .hash_map import search_cache
+    recent_searches = search_cache.get_search_history(user_id)
+    
+
+    return Response({"search_history" : recent_searches}, status=status.HTTP_200_OK)
