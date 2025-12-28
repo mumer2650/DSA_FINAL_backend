@@ -2,6 +2,7 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from .models import Location
 from .utilis import calculate_haversine
+from .graphs import graph
 
 @receiver(post_save, sender=Location)
 def connect_to_nearest_waypoint(sender, instance, created, **kwargs):
@@ -26,7 +27,11 @@ def connect_to_nearest_waypoint(sender, instance, created, **kwargs):
         if nearest_waypoint:
             from .models import Connection 
             
-            Connection.objects.get_or_create(
+            conn, _ = Connection.objects.get_or_create(
                 from_location=instance,
                 to_location=nearest_waypoint
             )
+            
+            graph.add_location(instance)
+            graph.add_edge(instance.id, nearest_waypoint.id, conn.distance)
+            graph.add_edge(nearest_waypoint.id, instance.id, conn.distance)
