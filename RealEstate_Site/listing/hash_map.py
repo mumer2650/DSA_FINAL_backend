@@ -1,0 +1,35 @@
+from .models import Favorite
+
+class FavoriteHashMap:
+    #Format user_id : int as a key and set of prop ids : int as val
+    def __init__(self):
+        self._storage = {} 
+
+    def load_user_favorites(self, user_id):
+        fav_ids = Favorite.objects.filter(user_id=user_id).values_list('property_id', flat=True)
+        self._storage[user_id] = set(fav_ids)
+
+    def is_favorite(self, user_id, property_id):
+        if user_id not in self._storage:
+            self.load_user_favorites(user_id)
+        return property_id in self._storage.get(user_id, set())
+
+    def add_favorite(self, user_id, property_id):
+        if user_id not in self._storage:
+            self.load_user_favorites(user_id)
+        
+        self._storage[user_id].add(property_id)
+    
+    def remove_favorite(self, user_id, property_id):
+        if user_id in self._storage:
+            self._storage[user_id].discard(property_id)
+        
+    def get_all_for_user(self, user_id):
+        
+        if user_id not in self._storage:
+            self.load_user_favorites(user_id)
+        
+        return list(self._storage.get(user_id, set()))
+
+
+favorites_map = FavoriteHashMap()
