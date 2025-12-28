@@ -103,28 +103,28 @@ class LocationGraph:
 
         return float("inf")
     
-    def auto_connect_location(self,new_location, radius_km=5.0):
-        other_locations = Location.objects.exclude(id=new_location.id)
-        self.add_location(new_location)
-        for other in other_locations:
-            dist = calculate_haversine(
-                new_location.latitude, new_location.longitude,
-                other.latitude, other.longitude
-            )
+    # def auto_connect_location(self,new_location, radius_km=5.0):
+    #     other_locations = Location.objects.exclude(id=new_location.id)
+    #     self.add_location(new_location)
+    #     for other in other_locations:
+    #         dist = calculate_haversine(
+    #             new_location.latitude, new_location.longitude,
+    #             other.latitude, other.longitude
+    #         )
             
-            if dist <= radius_km:
-                Connection.objects.get_or_create(
-                    from_location=new_location,
-                    to_location=other,
-                    defaults={'distance': dist}
-                )
-                Connection.objects.get_or_create(
-                    from_location=other,
-                    to_location=new_location,
-                    defaults={'distance': dist}
-                )
-                self.add_edge(new_location.id,other.id,dist)
-                self.add_edge(other.id,new_location.id,dist)
+    #         if dist <= radius_km:
+    #             Connection.objects.get_or_create(
+    #                 from_location=new_location,
+    #                 to_location=other,
+    #                 defaults={'distance': dist}
+    #             )
+    #             Connection.objects.get_or_create(
+    #                 from_location=other,
+    #                 to_location=new_location,
+    #                 defaults={'distance': dist}
+    #             )
+    #             self.add_edge(new_location.id,other.id,dist)
+    #             self.add_edge(other.id,new_location.id,dist)
     
 
 class RecomendationGraph:
