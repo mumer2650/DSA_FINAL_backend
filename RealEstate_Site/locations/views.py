@@ -221,3 +221,24 @@ def bulk_connection_upload(request):
         "message": f"Processed batch. {created_count} new connections created.",
         "errors": errors
     }, status=201)
+    
+@api_view(['DELETE'])
+def delete_location_and_property(request, pk):
+    try:
+        location = Location.objects.get(pk=pk)
+        try:
+            prop = location.property 
+         
+            
+        except Property.DoesNotExist:
+            prop = None
+        location.delete()
+
+        return Response({
+            "message": f"Location {pk} and its associated property were deleted successfully."
+        }, status=status.HTTP_200_OK)
+
+    except Location.DoesNotExist:
+        return Response({"error": "Location not found"}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)

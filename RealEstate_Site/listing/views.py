@@ -35,6 +35,48 @@ def add_property(request):
     
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def bulk_add_properties(request):
+    data = request.data
+    
+    if not isinstance(data, list):
+        return Response({"error": "Expected a list of property objects"}, status=status.HTTP_400_BAD_REQUEST)
+
+    created_properties = []
+    
+    try:
+        with transaction.atomic():
+            # Import DSA structures inside the transaction
+            from .trees import property_tree, size_tree
+            from .heap import cheap_heap, size_heap
+
+            for property_data in data:
+                serializer = PropertySerializer(data=property_data)
+                
+                if serializer.is_valid():
+                    # 1. Save the Property (This triggers Location creation and Image download)
+                    new_property = serializer.save()
+                    
+                    # 2. Update DSA Memory Structures
+                    property_tree.insert(new_property)
+                    size_tree.insert(new_property)
+                    cheap_heap.insert(new_property)
+                    size_heap.insert(new_property)
+                    
+                    created_properties.append(serializer.data)
+                else:
+                    # If one fails, we raise an exception to roll back the whole transaction
+                    raise ValueError(f"Validation failed for {property_data.get('title', 'Unknown')}: {serializer.errors}")
+
+        return Response({
+            "message": f"Successfully added {len(created_properties)} properties",
+            "data": created_properties
+        }, status=status.HTTP_201_CREATED)
+
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
@@ -134,8 +176,7 @@ def toggle_favorite(request):
 
     except Exception as e:
         return Response({"error": str(e)}, status=500)
-    
-    
+        
     
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])

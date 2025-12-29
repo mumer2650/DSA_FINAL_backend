@@ -1,7 +1,8 @@
 from django.urls import path
-from .views import add_property,get_properties, search_price_range,get_sorted_by_price,get_sorted_by_size, advanced_search,get_user_favorites,toggle_favorite,get_recent_list,property_view
+from .views import add_property,get_properties, search_price_range,get_sorted_by_price,get_sorted_by_size, advanced_search,get_user_favorites,toggle_favorite,get_recent_list,property_view, bulk_add_properties
 urlpatterns = [
     path('create/', add_property, name='add_property'),
+    path('create-bulk/', bulk_add_properties, name='add_properties'),
     path('get/', get_properties, name='get_properties'),
     path('sorted/price/',get_sorted_by_price,name='sort_properties'),
     path('sorted/size/',get_sorted_by_size,name='sort_properties'),
