@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import get_nearby_facilities,get_shortest_path_distance, get_similar_recomendations,get_largest_sizes,get_top_cheepest,get_all_facilities,bulk_add_waypoints, bulk_connection_upload
+from .views import get_nearby_facilities,get_shortest_path_distance, get_similar_recomendations,get_largest_sizes,get_top_cheepest,get_all_facilities,bulk_add_waypoints, bulk_connection_upload, delete_location_and_property
 
 
 urlpatterns = [
@@ -11,4 +11,5 @@ urlpatterns = [
     path('get-facilities/',get_all_facilities, name= 'all_facilities'),
     path('add-way-point/',bulk_add_waypoints, name = "add-way-point") ,  
     path('add-connection/',bulk_connection_upload, name = "add-connection") ,  
+    #path('delete/<int:pk>/',delete_location_and_property, name = "add-connection") ,  
 ]

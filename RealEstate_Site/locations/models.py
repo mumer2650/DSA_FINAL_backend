@@ -7,7 +7,7 @@ class Location(models.Model):
         ('facility', 'Facility'),
         ('way_point', 'Way Point'),
     ]
-    name = models.CharField(max_length=100, unique=True)
+    name = models.CharField(max_length=100)
     latitude = models.FloatField()  
     longitude = models.FloatField()
     location_type = models.CharField(max_length=20, choices=LOCATION_TYPES, default='property')

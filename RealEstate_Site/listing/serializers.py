@@ -7,11 +7,13 @@ class PropertySerializer(serializers.ModelSerializer):
     latitude = serializers.FloatField(write_only=True)
     longitude = serializers.FloatField(write_only=True)
     
+    image = serializers.URLField(write_only=True, required=False)
+    
     class Meta:
         model = Property
         fields = [
-            'id', 'title', 'price', 'area', 'size', 'bedrooms', 
-            'bathrooms', 'image', 'location_id', 'location_name', 
+            'id', 'title', 'price',  'size', 'bedrooms', 
+            'bathrooms','floors', 'kitchens', 'description', 'image', 'location_id', 'location_name', 
             'latitude', 'longitude'
         ]
         extra_kwargs = {
@@ -23,14 +25,18 @@ class PropertySerializer(serializers.ModelSerializer):
         lat = validated_data.pop('latitude')
         lon = validated_data.pop('longitude')
         
+        # FIX: Include latitude and longitude in the query so that 
+        # unique coordinates result in unique Location objects.
         location_obj, created = Location.objects.get_or_create(
-            name=loc_name,
-            defaults={'latitude': lat, 'longitude': lon, 'location_type': "property"}
+            latitude=lat,
+            longitude=lon,
+            defaults={'name': loc_name, 'location_type': "property"}
         )
 
         title = validated_data.get('title')
+
         if Property.objects.filter(location_id=location_obj, title=title).exists():
-            raise serializers.ValidationError("This property listing already exists at this location!")
+            raise serializers.ValidationError("This property listing already exists at this exact location!")
 
         property_obj = Property.objects.create(location_id=location_obj, **validated_data)
         
