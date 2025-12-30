@@ -38,8 +38,10 @@ class Facility(models.Model):
         ('hospital', 'Hospital'),
         ('park', 'Park'),
         ('mosque', 'Mosque'),
+        ('food', 'Food'),
+        ('market', 'Market'),
         ('airport', 'Airport'),
-        ('police_station', 'Police Station'),
+        ('police', 'Police Station'),
     ]
     location = models.ForeignKey(Location, on_delete=models.CASCADE, related_name='facilities')
     name = models.CharField(max_length=100)

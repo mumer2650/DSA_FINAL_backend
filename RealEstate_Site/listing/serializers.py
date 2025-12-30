@@ -25,8 +25,6 @@ class PropertySerializer(serializers.ModelSerializer):
         lat = validated_data.pop('latitude')
         lon = validated_data.pop('longitude')
         
-        # FIX: Include latitude and longitude in the query so that 
-        # unique coordinates result in unique Location objects.
         location_obj, created = Location.objects.get_or_create(
             latitude=lat,
             longitude=lon,

@@ -4,7 +4,7 @@ from rest_framework import status
 from listing.models import Property
 from listing.serializers import PropertySerializer
 from .models import Facility, Location, WayPoint,Connection
-from .serializers import FacilitySerializer, ConnectionBulkSerializer
+from .serializers import FacilitySerializer, BulkFacilitySerializer
 from django.db import transaction
 
 @api_view(['GET'])
@@ -221,6 +221,35 @@ def bulk_connection_upload(request):
         "message": f"Processed batch. {created_count} new connections created.",
         "errors": errors
     }, status=201)
+ 
+@api_view(['POST'])
+def bulk_add_facilities(request):
+    data = request.data
+    
+    if not isinstance(data, list):
+        return Response({"error": "Expected a list of facility objects"}, status=status.HTTP_400_BAD_REQUEST)
+
+    created_facilities = []
+    
+    try:
+        with transaction.atomic():
+            for item in data:
+                serializer = BulkFacilitySerializer(data=item)
+                if serializer.is_valid():
+                    new_facility = serializer.save()
+                    
+                    
+                    created_facilities.append(serializer.data)
+                else:
+                    raise ValueError(f"Error in {item.get('name')}: {serializer.errors}")
+
+        return Response({
+            "message": f"Successfully added {len(created_facilities)} facilities and updated road network.",
+            "count": len(created_facilities)
+        }, status=status.HTTP_201_CREATED)
+
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
     
 @api_view(['DELETE'])
 def delete_location_and_property(request, pk):
