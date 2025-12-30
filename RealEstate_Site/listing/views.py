@@ -47,7 +47,7 @@ def bulk_add_properties(request):
     
     try:
         with transaction.atomic():
-            # Import DSA structures inside the transaction
+            
             from .trees import property_tree, size_tree
             from .heap import cheap_heap, size_heap
 
@@ -55,10 +55,10 @@ def bulk_add_properties(request):
                 serializer = PropertySerializer(data=property_data)
                 
                 if serializer.is_valid():
-                    # 1. Save the Property (This triggers Location creation and Image download)
+                    
                     new_property = serializer.save()
                     
-                    # 2. Update DSA Memory Structures
+                    
                     property_tree.insert(new_property)
                     size_tree.insert(new_property)
                     cheap_heap.insert(new_property)
@@ -66,7 +66,6 @@ def bulk_add_properties(request):
                     
                     created_properties.append(serializer.data)
                 else:
-                    # If one fails, we raise an exception to roll back the whole transaction
                     raise ValueError(f"Validation failed for {property_data.get('title', 'Unknown')}: {serializer.errors}")
 
         return Response({

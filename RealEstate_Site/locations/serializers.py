@@ -46,3 +46,27 @@ class ConnectionBulkSerializer(serializers.ModelSerializer):
     class Meta:
         model = Connection
         fields = ['from_location', 'to_location']
+    
+class BulkFacilitySerializer(serializers.ModelSerializer):
+    location_name = serializers.CharField(write_only=True)
+    latitude = serializers.FloatField(write_only=True)
+    longitude = serializers.FloatField(write_only=True)
+
+    class Meta:
+        model = Facility
+        fields = ['id', 'name', 'type', 'location_name', 'latitude', 'longitude']
+
+    def create(self, validated_data):
+        loc_name = validated_data.pop('location_name')
+        lat = validated_data.pop('latitude')
+        lon = validated_data.pop('longitude')
+
+        location_obj = Location.objects.create(
+            name=loc_name,
+            latitude=lat,
+            longitude=lon,
+            location_type='facility'
+        )
+
+        facility = Facility.objects.create(location=location_obj, **validated_data)
+        return facility

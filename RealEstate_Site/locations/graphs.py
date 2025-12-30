@@ -55,7 +55,7 @@ class LocationGraph:
             
             if self.nodes_data[curr_id]['type'] == 'facility' and curr_id != start_id:
                 found_facilities.append({
-                    "id": curr_id,
+                    "location_id": curr_id,
                     "name": self.nodes_data[curr_id]['name'],
                     "distance": current_total_dist,
                     "category" : self.nodes_data[curr_id]['category']
@@ -149,10 +149,10 @@ class RecomendationGraph:
                     continue
                     
                 similarities = 0
-                if abs(prop1.price - prop2.price) / prop1.price <= 0.30: similarities += 1
-                if abs(prop1.size - prop2.size) / prop1.size <= 0.30: similarities += 1
+                if abs(prop1.price - prop2.price) / prop1.price <= 0.015: similarities += 1
+                if abs(prop1.size - prop2.size) / prop1.size <= 0.01: similarities += 1
                 
-                if similarities >= 1:
+                if similarities > 1:
                     self.add_node(prop1.id)
                     self.add_node(prop2.id)
                     self.add_edge(prop1.id,prop2.id,similarities)
