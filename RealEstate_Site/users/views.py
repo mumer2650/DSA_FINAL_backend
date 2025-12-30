@@ -3,7 +3,7 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
-from .serializers import UserSerializer
+from .serializers import UserSerializer, UsernameUpdateSerializer
 from .permissions import IsAdminRole
 
 @api_view(['POST'])
@@ -31,3 +31,19 @@ def logout_user(request):
         return Response({"message": "Successfully logged out"}, status=status.HTTP_205_RESET_CONTENT)
     except Exception:
         return Response({"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['PATCH'])
+@permission_classes([IsAuthenticated])
+def edit_username(request):
+    user = request.user
+    
+    serializer = UsernameUpdateSerializer(user, data=request.data, partial=True)
+    
+    if serializer.is_valid():
+        serializer.save()
+        return Response({
+            "message": "Username updated successfully",
+            "username": user.username
+        }, status=status.HTTP_200_OK)
+    
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
