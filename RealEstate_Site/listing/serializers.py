@@ -12,7 +12,8 @@ class PropertySerializer(serializers.ModelSerializer):
         fields = [
             'id', 'title', 'price',  'size', 'bedrooms', 
             'bathrooms','floors', 'kitchens', 'description', 'image', 'location_id', 'location_name', 
-            'latitude', 'longitude'
+            'latitude', 'longitude',
+            'is_featured'
         ]
         extra_kwargs = {
             'location_id': {'read_only': True}
