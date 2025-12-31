@@ -84,7 +84,16 @@ class LocationGraph:
             curr_dist, curr_id = pq.pop()
             
             if curr_id == to_id:
-                return round(curr_dist, 2)
+                path = []
+                temp_id = to_id
+                while temp_id is not None:
+                    path.append(temp_id)
+                    temp_id = parent[temp_id]
+                
+                return {
+                    "distance": round(curr_dist, 2),
+                    "path": path[::-1] # ye list ko reverse karne ke liye (source --> destination)
+                }
 
             if curr_id in visited:
                 continue
@@ -101,7 +110,7 @@ class LocationGraph:
                     parent[neighbor_id] = curr_id
                     pq.push(new_dist,neighbor_id)
 
-        return float("inf")
+        return {"distance": float("inf"), "path": []}
     
     # def auto_connect_location(self,new_location, radius_km=5.0):
     #     other_locations = Location.objects.exclude(id=new_location.id)
