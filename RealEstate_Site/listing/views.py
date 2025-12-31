@@ -119,6 +119,18 @@ def get_properties(request):
     serializer = PropertySerializer(data,many=True)    
     return Response(serializer.data, status=status.HTTP_200_OK)
 
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_featured_properties(request):
+    
+    featured_props = Property.objects.filter(is_featured=True).order_by('-created_at')
+    
+    if not featured_props.exists():
+        return Response({"message": "No featured properties found"}, status=200)
+
+    serializer = PropertySerializer(featured_props, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
 @api_view(['GET']) 
 @permission_classes([AllowAny])
 def search_price_range(request):

@@ -12,6 +12,8 @@ class Property(models.Model):
     kitchens = models.IntegerField(default=1)
     description = models.TextField(blank=True, null=True)
     
+    is_featured = models.BooleanField(default=False)
+    
     image = models.ImageField(upload_to='properties/')
     location_id = models.ForeignKey('locations.Location', on_delete=models.CASCADE, related_name='properties')
     created_at = models.DateTimeField(auto_now_add=True)
