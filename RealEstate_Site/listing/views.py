@@ -9,6 +9,8 @@ from .models import Property, Favorite
 import locations.signals
 from django.db import transaction
 from .hash_map import favorites_map
+from django.db.models import Q
+from django.shortcuts import get_object_or_404
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -76,6 +78,39 @@ def bulk_add_properties(request):
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+@api_view(['GET'])
+@permission_classes([AllowAny]) 
+def get_single_property_detail(request, prop_id):
+    try:
+        property_obj = get_object_or_404(Property, id=prop_id)
+        
+        if request.user.is_authenticated:
+            from .hash_map import recent_view
+            recent_view.add_view(request.user.id, prop_id)
+
+        serializer = PropertySerializer(property_obj)
+        
+        return Response({
+            "status": "success",
+            "data": serializer.data
+        }, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+def property_keyword_search(request):
+    query = request.query_params.get('q', '')
+
+    if not query:
+        return Response({"error": "Please provide a search keyword"}, status=400)
+
+    properties = Property.objects.filter(
+        Q(title__icontains=query) | Q(description__icontains=query)
+    )
+
+    serializer = PropertySerializer(properties, many=True)
+    return Response(serializer.data)
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
