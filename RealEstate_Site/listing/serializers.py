@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Property
+from .models import Property , PropertyRequest
 from locations.models import Location
 
 class PropertySerializer(serializers.ModelSerializer):
@@ -37,3 +37,12 @@ class PropertySerializer(serializers.ModelSerializer):
         property_obj = Property.objects.create(location_id=location_obj, **validated_data)
         
         return property_obj
+    
+class PropertyRequestSerializer(serializers.ModelSerializer):
+    user_name = serializers.ReadOnlyField(source='user.username')
+    property_title = serializers.ReadOnlyField(source='property.title')
+
+    class Meta:
+        model = PropertyRequest
+        fields = ['id', 'user', 'user_name', 'property', 'property_title', 'request_type', 'status', 'created_at']
+        read_only_fields = ['user', 'status', 'created_at']
