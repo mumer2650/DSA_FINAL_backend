@@ -4,13 +4,14 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework import status
 from users.permissions import IsAdminRole
-from .serializers import PropertySerializer
-from .models import Property, Favorite
+from .serializers import PropertySerializer, PropertyRequestSerializer
+from .models import Property, Favorite, PropertyRequest
 import locations.signals
 from django.db import transaction
 from .hash_map import favorites_map
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
+from django.db import IntegrityError
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -293,3 +294,78 @@ def get_recent_searches(request):
     
 
     return Response({"search_history" : recent_searches}, status=status.HTTP_200_OK)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_property_request(request):
+    """
+    Expected JSON: {"property": 15, "request_type": "buy"}
+    """
+    serializer = PropertyRequestSerializer(data=request.data)
+    
+    if serializer.is_valid():
+        try:
+            serializer.save(user=request.user)
+            return Response({
+                "message": "Request submitted successfully!",
+                "data": serializer.data
+            }, status=status.HTTP_201_CREATED)
+            
+        except IntegrityError:
+            return Response({
+                "error": "You have already submitted a request for this property."
+            }, status=status.HTTP_400_BAD_REQUEST)
+            
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_all_requests(request):
+    """
+    Returns requests based on user role.
+    Admins see all, Customers see only their own.
+    """
+    user = request.user
+
+    requests = PropertyRequest.objects.all().order_by('-created_at')
+
+    serializer = PropertyRequestSerializer(requests, many=True)
+    
+    return Response({
+        "count": len(serializer.data),
+        "requests": serializer.data
+    })
+
+@api_view(['PATCH'])
+@permission_classes([IsAuthenticated])
+def manage_property_request(request, request_id):
+    """
+    Body: {"action": "approve"} OR {"action": "reject"}
+    """
+    if request.user.role != 'admin':
+        return Response(
+            {"error": "Unauthorized. Only admins can perform this action."}, 
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    prop_request = get_object_or_404(PropertyRequest, id=request_id)
+
+    action = request.data.get('action')
+
+    if action == 'approve':
+        prop_request.status = 'approved'
+    elif action == 'reject':
+        prop_request.status = 'rejected'
+    else:
+        return Response(
+            {"error": "Invalid action. Use 'approve' or 'reject'."}, 
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    prop_request.save()
+
+    return Response({
+        "message": f"Request {request_id} has been {prop_request.status}.",
+        "request_id": prop_request.id,
+        "new_status": prop_request.status
+    }, status=status.HTTP_200_OK)

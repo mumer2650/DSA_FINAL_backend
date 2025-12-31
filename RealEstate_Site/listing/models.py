@@ -28,3 +28,30 @@ class Favorite(models.Model):
 
     class Meta:
         unique_together = ('user', 'property')
+        
+
+class PropertyRequest(models.Model):
+    TYPE_CHOICES = (
+        ('buy', 'Buy'),
+    )
+
+    STATUS_CHOICES = (
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    )
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    property = models.ForeignKey(Property, on_delete=models.CASCADE)
+    request_type = models.CharField(max_length=10, choices=TYPE_CHOICES)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        # This creates the composite key behavior (User + Property must be unique)
+        constraints = [
+            models.UniqueConstraint(fields=['user', 'property'], name='unique_user_property_request')
+        ]
+
+    def __str__(self):
+        return f"{self.user.username} - {self.property.title} ({self.request_type})"
