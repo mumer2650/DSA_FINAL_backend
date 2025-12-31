@@ -7,8 +7,6 @@ class PropertySerializer(serializers.ModelSerializer):
     latitude = serializers.FloatField(write_only=True)
     longitude = serializers.FloatField(write_only=True)
     
-    image = serializers.URLField(write_only=True, required=False)
-    
     class Meta:
         model = Property
         fields = [
