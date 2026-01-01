@@ -2,6 +2,8 @@ from django.urls import path
 from . import views
 urlpatterns = [
     path('create/', views.add_property, name='add_property'),
+    path('edit/<int:prop_id>/', views.edit_property, name='edit-property'),
+    path('delete/<int:prop_id>/', views.delete_property, name='delete-property'),
     path('search/',views.property_keyword_search, name="search"),
     path('create-bulk/', views.bulk_add_properties, name='add_properties'),
     path('get/', views.get_properties, name='get_properties'),

@@ -112,6 +112,66 @@ class AVL_Tree_Property:
 
         return node
     
+    def update_property(self, old_property_obj, new_property_obj):
+        
+        self.delete(old_property_obj)
+        
+        self.insert(new_property_obj)
+    
+    def delete(self, property_obj):
+        self.root = self._delete_recursive(self.root, property_obj)
+        self.size -= 1
+
+    def _get_min_value_node(self, node):
+        current = node
+        while current.left is not None:
+            current = current.left
+        return current
+
+    def _delete_recursive(self, node, property_obj):
+        if not node:
+            return node
+
+        val = getattr(property_obj, self.balance_field)
+
+        if val < node.key:
+            node.left = self._delete_recursive(node.left, property_obj)
+        elif val > node.key:
+            node.right = self._delete_recursive(node.right, property_obj)
+        else:
+            if len(node.properties) > 1:
+                node.properties = [p for p in node.properties if p.id != property_obj.id]
+                return node
+            
+            if node.left is None:
+                return node.right
+            elif node.right is None:
+                return node.left
+
+            temp = self._get_min_value_node(node.right)
+            node.key = temp.key
+            node.properties = temp.properties
+            node.right = self._delete_recursive(node.right, temp.properties[0])
+
+        if not node:
+            return node
+
+        node.height = 1 + max(self.get_node_height(node.left), self.get_node_height(node.right))
+        balance = self.get_balance(node)
+
+        if balance > 1 and self.get_balance(node.left) >= 0:
+            return self.rightRotation(node)
+        if balance > 1 and self.get_balance(node.left) < 0:
+            node.left = self.leftRotation(node.left)
+            return self.rightRotation(node)
+        if balance < -1 and self.get_balance(node.right) <= 0:
+            return self.leftRotation(node)
+        if balance < -1 and self.get_balance(node.right) > 0:
+            node.right = self.rightRotation(node.right)
+            return self.leftRotation(node)
+
+        return node
+    
     def get_all_sorted(self):
         sorted_list = []
         self._inorder_traversal(self.root, sorted_list)
