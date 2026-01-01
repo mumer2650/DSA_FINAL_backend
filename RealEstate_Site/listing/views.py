@@ -440,3 +440,21 @@ def manage_property_request(request, request_id):
         "request_id": prop_request.id,
         "new_status": prop_request.status
     }, status=status.HTTP_200_OK)
+    
+    
+    
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_property_request(request, request_id):
+    try:
+        # Get the request, but ONLY if it belongs to the logged-in user
+        prop_request = PropertyRequest.objects.get(id=request_id, user=request.user)
+        prop_request.delete()
+        
+        return Response({"message": "Request cancelled successfully"}, status=status.HTTP_200_OK)
+    
+    except PropertyRequest.DoesNotExist:
+        return Response(
+            {"error": "Request not found or you are not authorized to cancel it."}, 
+            status=status.HTTP_404_NOT_FOUND
+        )
