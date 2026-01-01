@@ -39,6 +39,22 @@ class PropertySerializer(serializers.ModelSerializer):
         
         return property_obj
     
+    # --- THE FIX IS HERE ---
+    def to_representation(self, instance):
+        """
+        This ensures that when we GET properties, we actually see the coordinates
+        stored in the related Location object.
+        """
+        representation = super().to_representation(instance)
+        
+        # Manually inject the location data from the relation
+        if instance.location_id:
+            representation['latitude'] = instance.location_id.latitude
+            representation['longitude'] = instance.location_id.longitude
+            representation['location_name'] = instance.location_id.name
+            
+        return representation
+    
 
 class SellPropertyDetailSerializer(serializers.ModelSerializer):
     class Meta:
