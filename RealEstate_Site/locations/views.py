@@ -43,6 +43,63 @@ def get_all_facilities(request):
     return Response({"data":serialized.data},status=status.HTTP_200_OK)
 
 
+# @api_view(['GET'])
+# def get_shortest_path_distance(request):
+#     from_id = request.query_params.get('from_id')
+#     to_id = request.query_params.get('to_id')
+
+#     if not from_id or not to_id:
+#         return Response(
+#             {"error": "Please provide both from_id and to_id"}, 
+#             status=status.HTTP_400_BAD_REQUEST
+#         )
+
+#     try:
+#         from_id = int(from_id)
+#         to_id = int(to_id)
+        
+#         from .graphs import graph
+
+#         if not graph:
+#             return Response(
+#                 {"error": "Graph is not initialized"}, 
+#                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
+#             )
+            
+#         result = graph.dijkstra_shortest_path(from_id,to_id)
+#         distance = result['distance']
+#         path_ids = result['path']
+
+#         if distance == float('inf'):
+#             return Response(
+#                 {"error": "No path exists between these locations"}, 
+#                 status=status.HTTP_404_NOT_FOUND
+#             )
+
+#         edges = [
+#             {"from_id": path_ids[i], "to_id": path_ids[i+1]} 
+#             for i in range(len(path_ids) - 1)
+#         ]
+        
+#         loc_objs = Location.objects.filter(id__in=path_ids)
+#         loc_map = {loc.id: {"location_id": loc.id,"lat": loc.latitude, "lng": loc.longitude} for loc in loc_objs}
+        
+#         coordinates = [loc_map[node_id] for node_id in path_ids]
+
+#         return Response({
+#             "origin": graph.nodes_data[from_id]['name'],
+#             "destination": graph.nodes_data[to_id]['name'],
+#             "shortest_distance_km": distance,
+#             "path_nodes": path_ids,
+#             "nodes": coordinates,
+#             "edges": edges,
+#             "unit": "kilometers"
+#         }, status=status.HTTP_200_OK)
+#     except ValueError:
+#         return Response({"error": "IDs must be integers"}, status=status.HTTP_400_BAD_REQUEST)
+#     except Exception as e:
+#         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 @api_view(['GET'])
 def get_shortest_path_distance(request):
     from_id = request.query_params.get('from_id')
@@ -57,6 +114,32 @@ def get_shortest_path_distance(request):
     try:
         from_id = int(from_id)
         to_id = int(to_id)
+
+        # --- SMART LOGIC START ---
+        # 1. Try to interpret 'from_id' as a Property ID first
+        try:
+            # We look for a property with this ID (e.g., 77)
+            property_obj = Property.objects.get(id=from_id)
+            
+            # If found, we swap '77' for the actual Location ID (e.g., 12356291518)
+            # Using the same field access pattern found in your 'get_nearby_facilities' view:
+            if hasattr(property_obj, 'location_id'):
+                # Checks if it's an object or an ID. 
+                # If your model field is named 'location_id', this gets the object, then .id gets the int
+                if hasattr(property_obj.location_id, 'id'):
+                    from_id = property_obj.location_id.id
+                else:
+                    # Fallback if it was just an ID
+                    from_id = property_obj.location_id
+            elif hasattr(property_obj, 'location'):
+                 from_id = property_obj.location.id
+                 
+            print(f"DEBUG: Translated Property ID {request.query_params.get('from_id')} to Location ID {from_id}")
+
+        except Property.DoesNotExist:
+            # It wasn't a Property ID, so it must be a raw Location ID already.
+            pass
+        # --- SMART LOGIC END ---
         
         from .graphs import graph
 
@@ -66,7 +149,7 @@ def get_shortest_path_distance(request):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
             
-        result = graph.dijkstra_shortest_path(from_id,to_id)
+        result = graph.dijkstra_shortest_path(from_id, to_id)
         distance = result['distance']
         path_ids = result['path']
 
@@ -84,22 +167,31 @@ def get_shortest_path_distance(request):
         loc_objs = Location.objects.filter(id__in=path_ids)
         loc_map = {loc.id: {"location_id": loc.id,"lat": loc.latitude, "lng": loc.longitude} for loc in loc_objs}
         
-        coordinates = [loc_map[node_id] for node_id in path_ids]
+        # Ensure strict ordering of coordinates matching the path
+        coordinates = []
+        for node_id in path_ids:
+            if node_id in loc_map:
+                coordinates.append(loc_map[node_id])
+            else:
+                # Fallback if a node is missing from DB (shouldn't happen)
+                continue
 
         return Response({
-            "origin": graph.nodes_data[from_id]['name'],
-            "destination": graph.nodes_data[to_id]['name'],
+            "origin": graph.nodes_data.get(from_id, {}).get('name', 'Unknown'),
+            "destination": graph.nodes_data.get(to_id, {}).get('name', 'Unknown'),
             "shortest_distance_km": distance,
             "path_nodes": path_ids,
             "nodes": coordinates,
             "edges": edges,
             "unit": "kilometers"
         }, status=status.HTTP_200_OK)
+        
     except ValueError:
         return Response({"error": "IDs must be integers"}, status=status.HTTP_400_BAD_REQUEST)
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
+        
 @api_view(['GET'])
 def get_similar_recomendations(request,prop_id):
     try:

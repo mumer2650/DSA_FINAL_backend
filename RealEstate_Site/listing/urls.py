@@ -7,6 +7,7 @@ urlpatterns = [
     path('search/',views.property_keyword_search, name="search"),
     path('create-bulk/', views.bulk_add_properties, name='add_properties'),
     path('get/', views.get_properties, name='get_properties'),
+    path('all/', views.get_properties, name='get_all_properties'),
     path('get-featured/', views.get_featured_properties, name='get_featured_views.properties'),
     path('sorted/price/',views.get_sorted_by_price,name='sort_properties'),
     path('sorted/size/',views.get_sorted_by_size,name='sort_properties'),
