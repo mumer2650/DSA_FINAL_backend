@@ -20,6 +20,23 @@ class CheapPropertyHeap:
         self.heap[0] = self.heap.pop()
         self.heapify_down(0)
         return root
+    
+    def remove_by_id(self, property_id):
+
+        for i in range(len(self.heap)):
+            if self.heap[i][1].id == property_id:
+                self.heap[i] = self.heap[-1]
+                self.heap.pop()
+                
+                if i < len(self.heap):
+                    self.heapify_down(i)
+                    self.heapify_up(i)
+                return True
+        return False
+
+    def update_property(self, old_id, new_property_obj):
+        self.remove_by_id(old_id)
+        self.insert(new_property_obj)
 
     def heapify_up(self, index):
         parent = (index - 1) // 2
@@ -62,6 +79,21 @@ class LargestPropertyHeap:
         self.heap[0] = self.heap.pop()
         self.heapify_down(0)
         return root
+    
+    def remove_by_id(self, property_id):
+        for i in range(len(self.heap)):
+            if self.heap[i][1].id == property_id:
+                self.heap[i] = self.heap[-1]
+                self.heap.pop()
+                if i < len(self.heap):
+                    self.heapify_down(i)
+                    self.heapify_up(i)
+                return True
+        return False
+
+    def update_property(self, old_id, new_property_obj):
+        self.remove_by_id(old_id)
+        self.insert(new_property_obj)
 
     def heapify_up(self, index):
         parent = (index - 1) // 2

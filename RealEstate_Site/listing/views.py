@@ -12,6 +12,7 @@ from .hash_map import favorites_map
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.db import IntegrityError
+import copy
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -37,6 +38,50 @@ def add_property(request):
         }, status=status.HTTP_201_CREATED)
     
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['PATCH'])
+@permission_classes([IsAuthenticated])
+def edit_property(request, prop_id):
+    property_obj = get_object_or_404(Property, id=prop_id)
+    old_property_snapshot = copy.copy(property_obj)
+
+    data = request.data.copy()
+    data.pop('location_id', None) 
+
+    serializer = PropertySerializer(property_obj, data=data, partial=True)
+    
+    if serializer.is_valid():
+        updated_property = serializer.save()
+        
+        from .trees import property_tree,size_tree
+        from .heap import cheap_heap, size_heap
+        property_tree.update_property(old_property_snapshot, updated_property)
+        size_tree.update_property(old_property_snapshot, updated_property)
+        cheap_heap.update_property(prop_id, updated_property)
+        size_heap.update_property(prop_id, updated_property)
+
+        return Response({
+            "message": "Property updated successfully",
+            "data": serializer.data
+        }, status=status.HTTP_200_OK)
+    
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_property(request, prop_id):
+    property_obj = get_object_or_404(Property, id=prop_id)
+    
+    from .trees import property_tree,size_tree
+    property_tree.delete(property_obj)
+    size_tree.delete(property_obj)
+    
+    property_obj.delete()
+
+    return Response({
+        "message": "Property deleted successfully"
+    }, status=status.HTTP_204_NO_CONTENT)
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
