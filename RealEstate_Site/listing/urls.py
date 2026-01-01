@@ -17,4 +17,5 @@ urlpatterns = [
     path('submit-buy-request/', views.create_property_request, name='submit_request'),
     path('submit-sell-request/', views.submit_sell_request, name='submit_sell_request'),
     path('manage-request/<int:request_id>/', views.manage_property_request, name='manage_request'),
+    path('cancel-request/<int:request_id>/', views.delete_property_request, name='delete_request'),
 ]
