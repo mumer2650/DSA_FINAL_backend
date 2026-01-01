@@ -14,6 +14,7 @@ urlpatterns = [
     path('view/<int:prop_id>/', views.get_single_property_detail, name='record_view'),
     path('recent/',views.get_recent_list, name='get_recent'),
     path('all-requests/', views.get_all_requests, name='get_all_requests'),
+    path('my-requests/', views.get_my_requests, name='get_my_requests'),    # User (NEW)
     path('submit-buy-request/', views.create_property_request, name='submit_request'),
     path('submit-sell-request/', views.submit_sell_request, name='submit_sell_request'),
     path('manage-request/<int:request_id>/', views.manage_property_request, name='manage_request'),

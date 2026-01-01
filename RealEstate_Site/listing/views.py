@@ -392,14 +392,29 @@ def submit_sell_request(request):
         return Response({"error": str(e)}, status=400)
     
     
+# @api_view(['GET'])
+# @permission_classes([IsAuthenticated])
+# def get_all_requests(request):
+#     user = request.user
+
+#     # OPTIMIZATION CHECK: Ensure 'property' is inside select_related
+#     queryset = PropertyRequest.objects.all().select_related('user', 'property', 'sell_prop').order_by('-created_at')
+
+#     serializer = PropertyRequestSerializer(queryset, many=True)
+    
+#     return Response({
+#         "count": queryset.count(),
+#         "requests": serializer.data
+#     })
+    
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_all_requests(request):
-    user = request.user
+    # Security Check: Reject if not Admin
+    if getattr(request.user, 'role', 'customer') != 'admin':
+        return Response({"error": "Unauthorized"}, status=status.HTTP_403_FORBIDDEN)
 
-    # OPTIMIZATION CHECK: Ensure 'property' is inside select_related
     queryset = PropertyRequest.objects.all().select_related('user', 'property', 'sell_prop').order_by('-created_at')
-
     serializer = PropertyRequestSerializer(queryset, many=True)
     
     return Response({
@@ -407,6 +422,19 @@ def get_all_requests(request):
         "requests": serializer.data
     })
     
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_my_requests(request):
+    # No role check needed. We just filter by the logged-in user.
+    # This is 100% secure.
+    user_requests = PropertyRequest.objects.filter(user=request.user).select_related('property', 'sell_prop').order_by('-created_at')
+    
+    serializer = PropertyRequestSerializer(user_requests, many=True)
+    
+    # Returning a flat list to make it easy for frontend
+    return Response(serializer.data)
+
+
     
 @api_view(['PATCH'])
 @permission_classes([IsAuthenticated])
