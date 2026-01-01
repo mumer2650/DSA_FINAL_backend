@@ -144,6 +144,7 @@ def assign_bedroom_bath_pairs(regions, scale_x, scale_y, bath_area):
 def assign_hallway(regions):
     """
     Assign one region as hallway from remaining unassigned regions.
+    Prefers elongated regions (length > width) which are ideal for hallways.
 
     Args:
         regions: List of BSP regions
@@ -152,13 +153,21 @@ def assign_hallway(regions):
         Hallway region if assigned, None otherwise
     """
     unassigned = [r for r in regions if r.room_type is None]
-    if unassigned:
-        # Assign largest unassigned as hallway
-        hallway = max(unassigned, key=lambda r: r.w * r.h)
-        hallway.room_type = 'HALL'
-        return hallway
+    if not unassigned:
+        return None
 
-    return None
+    # Prefer elongated regions (length > width) for hallways
+    elongated_regions = [r for r in unassigned if r.w > r.h]
+
+    if elongated_regions:
+        # Choose the longest elongated region
+        hallway = max(elongated_regions, key=lambda r: r.w)
+    else:
+        # Fallback: choose the largest region by area
+        hallway = max(unassigned, key=lambda r: r.w * r.h)
+
+    hallway.room_type = 'HALL'
+    return hallway
 
 
 def same_floor(r1, r2):
@@ -471,6 +480,9 @@ def generate_house(request):
             regions = split_space(root, rooms_per_floor)
 
             # 3. Reserve special regions
+            # Hallway first (prefer elongated regions)
+            assign_hallway(regions)
+
             # Stairs (only for multifloored)
             assign_staircase(regions, floors)
 
@@ -480,9 +492,6 @@ def generate_house(request):
 
             # 4. Assign bedroom + bath pairs
             assign_bedroom_bath_pairs(regions, scale_x, scale_y, bath_area)
-
-            # 5. Assign hallway
-            assign_hallway(regions)
 
             # 6. Build connectivity graph
             graph = build_room_graph(regions)

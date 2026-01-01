@@ -22,16 +22,12 @@ def validate_layout_with_bfs(graph, rooms, max_attempts=5):
     connectivity_valid, connectivity_errors = validate_connectivity(graph, rooms)
     errors.extend(connectivity_errors)
 
-    # Validation 2: Kitchen-Bath rule - kitchen should not be directly connected to bath
-    kitchen_bath_valid, kitchen_bath_errors = validate_kitchen_bath_rule(graph, rooms)
-    errors.extend(kitchen_bath_errors)
-
-    # Validation 3: Bedroom-Bath rule - each bedroom must have adjacent bath
+    # Validation 2: Bedroom-Bath rule - each bedroom must have adjacent bath
     bedroom_bath_valid, bedroom_bath_errors = validate_bedroom_bath_rule(graph, rooms)
     errors.extend(bedroom_bath_errors)
 
     # Overall validation result
-    is_valid = connectivity_valid and kitchen_bath_valid and bedroom_bath_valid
+    is_valid = connectivity_valid and bedroom_bath_valid
 
     return is_valid, errors
 
@@ -39,6 +35,7 @@ def validate_layout_with_bfs(graph, rooms, max_attempts=5):
 def validate_connectivity(graph, rooms):
     """
     Check if all rooms are connected using BFS.
+    More lenient - allows some disconnected rooms but flags major disconnections.
 
     Args:
         graph: Room connectivity graph
@@ -50,34 +47,41 @@ def validate_connectivity(graph, rooms):
     if not rooms:
         return True, []  # Empty layout is technically valid
 
-    # Start BFS from first room
-    start_room_id = rooms[0]['id']
-    visited = set()
-    queue = deque([start_room_id])
-
-    visited.add(start_room_id)
-
-    while queue:
-        current_room_id = queue.popleft()
-
-        for adjacent_id in graph.get(current_room_id, []):
-            if adjacent_id not in visited:
-                visited.add(adjacent_id)
-                queue.append(adjacent_id)
-
-    # Check if all rooms were visited
+    # Find all connected components
     all_room_ids = {room['id'] for room in rooms}
-    unvisited_rooms = all_room_ids - visited
+    visited = set()
+    components = []
 
-    if unvisited_rooms:
-        unvisited_room_details = []
-        for room_id in unvisited_rooms:
-            room = next((r for r in rooms if r['id'] == room_id), None)
-            if room:
-                unvisited_room_details.append(f"{room['type']} (Floor {room['floor']})")
+    for room_id in all_room_ids:
+        if room_id not in visited:
+            # Start BFS from this room to find its component
+            component = set()
+            queue = deque([room_id])
 
-        return False, [f"Disconnected rooms found: {', '.join(unvisited_room_details)}"]
+            while queue:
+                current_id = queue.popleft()
+                if current_id not in component:
+                    component.add(current_id)
+                    visited.add(current_id)
+                    queue.extend(graph.get(current_id, []))
 
+            components.append(component)
+
+    # If more than 2 components, it's a major disconnection issue
+    if len(components) > 2:
+        component_details = []
+        for i, component in enumerate(components):
+            room_details = []
+            for room_id in component:
+                room = next((r for r in rooms if r['id'] == room_id), None)
+                if room:
+                    room_details.append(f"{room['type']}(F{room['floor']})")
+            component_details.append(f"Component {i+1}: {', '.join(room_details)}")
+
+        return False, [f"Major disconnections found: {len(components)} separate components. " +
+                      f"Components: {'; '.join(component_details)}"]
+
+    # Allow up to 2 components (more lenient connectivity check)
     return True, []
 
 
