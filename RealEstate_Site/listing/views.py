@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from users.permissions import IsAdminRole
 from .serializers import PropertySerializer, PropertyRequestSerializer
-from .models import Property, Favorite, PropertyRequest
+from .models import Property, Favorite, PropertyRequest,SellPropertyDetail
 import locations.signals
 from django.db import transaction
 from .hash_map import favorites_map
@@ -358,25 +358,55 @@ def create_property_request(request):
             }, status=status.HTTP_400_BAD_REQUEST)
             
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def submit_sell_request(request):
+    data = request.data
+    sell_data = data.get('sell_details')
 
+    if not sell_data:
+        return Response({"error": "Sell details are required"}, status=400)
+
+    try:
+        with transaction.atomic():
+            sell_info = SellPropertyDetail.objects.create(
+                title=sell_data.get('title'),
+                location_name=sell_data.get('location_name'),
+                latitude=sell_data.get('latitude'),
+                longitude=sell_data.get('longitude'),
+                price=sell_data.get('price')
+            )
+
+            prop_request = PropertyRequest.objects.create(
+                user=request.user,
+                request_type='sell',
+                sell_prop=sell_info, 
+                property=None,       
+                status='pending'
+            )
+
+            serializer = PropertyRequestSerializer(prop_request)
+            return Response(serializer.data, status=201)
+
+    except Exception as e:
+        return Response({"error": str(e)}, status=400)
+    
+    
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_all_requests(request):
-    """
-    Returns requests based on user role.
-    Admins see all, Customers see only their own.
-    """
     user = request.user
 
-    requests = PropertyRequest.objects.all().order_by('-created_at')
+    queryset = PropertyRequest.objects.all()
 
-    serializer = PropertyRequestSerializer(requests, many=True)
+    queryset = queryset.select_related('user', 'property', 'sell_prop').order_by('-created_at')
+
+    serializer = PropertyRequestSerializer(queryset, many=True)
     
     return Response({
-        "count": len(serializer.data),
+        "count": queryset.count(),
         "requests": serializer.data
     })
-
 @api_view(['PATCH'])
 @permission_classes([IsAuthenticated])
 def manage_property_request(request, request_id):

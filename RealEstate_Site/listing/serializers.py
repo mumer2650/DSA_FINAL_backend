@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Property , PropertyRequest
+from .models import Property , PropertyRequest, SellPropertyDetail
 from locations.models import Location
 
 class PropertySerializer(serializers.ModelSerializer):
@@ -39,11 +39,30 @@ class PropertySerializer(serializers.ModelSerializer):
         
         return property_obj
     
+
+class SellPropertyDetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SellPropertyDetail
+        fields = ['id', 'title', 'location_name', 'latitude', 'longitude', 'price']
+
 class PropertyRequestSerializer(serializers.ModelSerializer):
     user_name = serializers.ReadOnlyField(source='user.username')
-    property_title = serializers.ReadOnlyField(source='property.title')
+    property_title = serializers.SerializerMethodField()
+    sell_prop = SellPropertyDetailSerializer(read_only=True)
 
     class Meta:
         model = PropertyRequest
-        fields = ['id', 'user', 'user_name', 'property', 'property_title', 'request_type', 'status', 'created_at']
+        fields = [
+            'id', 'user_name', 'property', 'sell_prop', 
+            'property_title', 'request_type', 'status', 'created_at'
+        ]
         read_only_fields = ['user', 'status', 'created_at']
+
+    def get_property_title(self, obj):
+        if obj.request_type == 'buy' and obj.property:
+            return obj.property.title
+        
+        if obj.request_type == 'sell' and obj.sell_prop:
+            return obj.sell_prop.title
+            
+        return "Unknown Property"
