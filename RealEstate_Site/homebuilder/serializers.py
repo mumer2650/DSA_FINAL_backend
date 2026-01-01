@@ -36,24 +36,34 @@ class LayoutRequestSerializer(serializers.Serializer):
     """
     Serializer for layout generation request.
     """
-    length = serializers.FloatField(min_value=10, max_value=100)
-    width = serializers.FloatField(min_value=10, max_value=100)
-    floors = serializers.IntegerField(min_value=1, max_value=3)
-    rooms = serializers.IntegerField(min_value=3, max_value=15)  # rooms per floor
-    minRoomSize = serializers.FloatField(min_value=10, max_value=50, default=20)
-    maxRoomSize = serializers.FloatField(min_value=20, max_value=80, default=40)
-    kitchenSize = serializers.FloatField(min_value=15, max_value=50, default=25)
-    washroomSize = serializers.FloatField(min_value=5, max_value=20, default=10)
+    length = serializers.FloatField(min_value=10, max_value=200)  # meters
+    width = serializers.FloatField(min_value=10, max_value=200)   # meters
+    floors = serializers.IntegerField(min_value=1, max_value=5)   # allow up to 5 floors
+    rooms = serializers.IntegerField(min_value=3, max_value=20)   # rooms per floor
+    minRoomLength = serializers.FloatField(min_value=5, max_value=50, default=20)  # meters
+    minRoomWidth = serializers.FloatField(min_value=5, max_value=50, default=25)   # meters
+    kitchenSize = serializers.FloatField(min_value=10, max_value=500, default=250)  # square meters
+    washroomSize = serializers.FloatField(min_value=5, max_value=200, default=100)  # square meters
 
     def validate(self, data):
         """
         Validate request data.
         """
-        if data['minRoomSize'] >= data['maxRoomSize']:
-            raise serializers.ValidationError("minRoomSize must be less than maxRoomSize")
+        # Validate that room dimensions make sense
+        min_length = data.get('minRoomLength', 20)
+        min_width = data.get('minRoomWidth', 25)
 
+        if min_length <= 0 or min_width <= 0:
+            raise serializers.ValidationError("Room dimensions must be positive")
+
+        # Basic sanity check - house should be reasonably sized
         if data['length'] < data['width']:
-            raise serializers.ValidationError("House length should typically be greater than width")
+            raise serializers.ValidationError("House length should typically be greater than or equal to width")
+
+        # Kitchen should be reasonably sized compared to room minimums
+        min_room_area = min_length * min_width
+        if data['kitchenSize'] < min_room_area * 0.8:
+            raise serializers.ValidationError("Kitchen size should be at least 80% of minimum room area")
 
         return data
 

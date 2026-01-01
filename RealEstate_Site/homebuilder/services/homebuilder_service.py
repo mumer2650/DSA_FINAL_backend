@@ -1,6 +1,6 @@
 from django.db import transaction
 from ..models import HomeLayout, Room
-from .bsp import generate_complete_house
+from .bsp import generate_house
 from .room_graph import build_connectivity_graph
 from .validator import comprehensive_validation
 
@@ -25,15 +25,6 @@ class HomeBuilderService:
         Returns:
             HomeLayout instance with rooms
         """
-        length = request_data['length']
-        width = request_data['width']
-        floors = request_data['floors']
-        rooms_per_floor = request_data['rooms']
-        min_room_size = request_data.get('minRoomSize', 20)
-        max_room_size = request_data.get('maxRoomSize', 40)
-        kitchen_size = request_data.get('kitchenSize', 25)
-        washroom_size = request_data.get('washroomSize', 10)
-
         # Generate layout with validation and regeneration
         valid_layout = None
         attempts = 0
@@ -42,16 +33,7 @@ class HomeBuilderService:
             attempts += 1
 
             # Generate house layout using BSP
-            layout_data = generate_complete_house(
-                length=length,
-                width=width,
-                floors=floors,
-                rooms_per_floor=rooms_per_floor,
-                min_room_size=min_room_size,
-                max_room_size=max_room_size,
-                kitchen_size=kitchen_size,
-                washroom_size=washroom_size
-            )
+            layout_data = generate_house(request_data)
 
             # Build connectivity graph
             graph = build_connectivity_graph(layout_data['rooms'])
@@ -60,7 +42,7 @@ class HomeBuilderService:
             validation_result = comprehensive_validation(
                 graph=graph,
                 rooms=layout_data['rooms'],
-                floors=floors
+                floors=layout_data['floors']
             )
 
             if validation_result['is_valid']:

@@ -1,5 +1,5 @@
 import random
-from collections import defaultdict
+from collections import defaultdict, deque
 from ..models import Room
 
 
@@ -18,7 +18,236 @@ class BSPNode:
         self.room_type = None
 
 
-def generate_floor_layout(floor_no, length, width, target_rooms, min_room_size=20, max_room_size=40):
+def normalize_units(length_m, width_m):
+    """
+    Normalize units from meters to internal coordinate system.
+
+    Args:
+        length_m: Length in meters
+        width_m: Width in meters
+
+    Returns:
+        Dictionary with normalized dimensions and scale factors
+    """
+    return {
+        "x": 0,
+        "y": 0,
+        "w": 100,  # Internal width unit
+        "h": 100,  # Internal height unit
+        "scale_x": length_m / 100,
+        "scale_y": width_m / 100,
+    }
+
+
+def area_in_meters(region, scale_x, scale_y):
+    """
+    Calculate area of a region in square meters.
+
+    Args:
+        region: BSPNode region
+        scale_x: X scale factor
+        scale_y: Y scale factor
+
+    Returns:
+        Area in square meters
+    """
+    return (region.w * scale_x) * (region.h * scale_y)
+
+
+def assign_staircase(regions, floors):
+    """
+    Assign staircase to largest region if multifloored house.
+
+    Args:
+        regions: List of BSP regions
+        floors: Total number of floors
+
+    Returns:
+        Stair region if assigned, None otherwise
+    """
+    if floors <= 1:
+        return None
+
+    # Find largest region for stairs
+    stair_region = max(regions, key=lambda r: r.w * r.h)
+    stair_region.room_type = 'STAIR'
+    return stair_region
+
+
+def assign_kitchen(regions, scale_x, scale_y, kitchen_area):
+    """
+    Assign kitchen to a region on floor 0 with area close to requested size.
+
+    Args:
+        regions: List of BSP regions
+        scale_x: X scale factor
+        scale_y: Y scale factor
+        kitchen_area: Requested kitchen area in square meters
+
+    Returns:
+        Kitchen region if assigned, None otherwise
+    """
+    # Filter regions on floor 0 that are not already assigned
+    floor_0_regions = [r for r in regions if r.floor == 0 and r.room_type is None]
+
+    # Find region with area closest to requested kitchen area (at least 80%)
+    best_region = None
+    best_diff = float('inf')
+
+    for r in sorted(floor_0_regions, key=lambda r: r.w * r.h, reverse=True):
+        area = area_in_meters(r, scale_x, scale_y)
+        if area >= kitchen_area * 0.8:
+            diff = abs(area - kitchen_area)
+            if diff < best_diff:
+                best_diff = diff
+                best_region = r
+
+    if best_region:
+        best_region.room_type = 'KITCHEN'
+        return best_region
+
+    return None
+
+
+def assign_bedroom_bath_pairs(regions, scale_x, scale_y, bath_area):
+    """
+    Assign bedroom and bath pairs from unassigned regions.
+
+    Args:
+        regions: List of BSP regions
+        scale_x: X scale factor
+        scale_y: Y scale factor
+        bath_area: Requested bath area in square meters
+
+    Returns:
+        List of (bedroom, bath) pairs
+    """
+    unassigned = [r for r in regions if r.room_type is None]
+    pairs = []
+
+    while len(unassigned) >= 2:
+        # Assign largest available as bedroom
+        bedroom = max(unassigned, key=lambda r: r.w * r.h)
+        unassigned.remove(bedroom)
+        bedroom.room_type = 'BEDROOM'
+
+        # Assign next largest as bath
+        bath = max(unassigned, key=lambda r: r.w * r.h)
+        unassigned.remove(bath)
+        bath.room_type = 'BATH'
+
+        pairs.append((bedroom, bath))
+
+    return pairs
+
+
+def assign_hallway(regions):
+    """
+    Assign one region as hallway from remaining unassigned regions.
+
+    Args:
+        regions: List of BSP regions
+
+    Returns:
+        Hallway region if assigned, None otherwise
+    """
+    unassigned = [r for r in regions if r.room_type is None]
+    if unassigned:
+        # Assign largest unassigned as hallway
+        hallway = max(unassigned, key=lambda r: r.w * r.h)
+        hallway.room_type = 'HALL'
+        return hallway
+
+    return None
+
+
+def same_floor(r1, r2):
+    """
+    Check if two regions are on the same floor.
+
+    Args:
+        r1, r2: BSP regions
+
+    Returns:
+        True if on same floor
+    """
+    return r1.floor == r2.floor
+
+
+def touches(r1, r2):
+    """
+    Check if two regions touch each other (share an edge).
+
+    Args:
+        r1, r2: BSP regions
+
+    Returns:
+        True if regions touch
+    """
+    # Check horizontal adjacency
+    horizontal_touch = (r1.y == r2.y + r2.h or r2.y == r1.y + r1.h) and (
+        (r1.x < r2.x + r2.w and r1.x + r1.w > r2.x) or
+        (r2.x < r1.x + r1.w and r2.x + r2.w > r1.x)
+    )
+
+    # Check vertical adjacency
+    vertical_touch = (r1.x == r2.x + r2.w or r2.x == r1.x + r1.w) and (
+        (r1.y < r2.y + r2.h and r1.y + r1.h > r2.y) or
+        (r2.y < r1.y + r1.h and r2.y + r2.h > r1.y)
+    )
+
+    return horizontal_touch or vertical_touch
+
+
+def build_room_graph(regions):
+    """
+    Build connectivity graph for rooms on the same floor.
+
+    Args:
+        regions: List of BSP regions
+
+    Returns:
+        Adjacency list graph
+    """
+    graph = defaultdict(list)
+
+    for i, r1 in enumerate(regions):
+        for j, r2 in enumerate(regions):
+            if i != j and same_floor(r1, r2) and touches(r1, r2):
+                graph[i].append(j)
+
+    return graph
+
+
+def bfs_validate(graph, regions):
+    """
+    Validate that all rooms are connected using BFS.
+
+    Args:
+        graph: Room connectivity graph
+        regions: List of regions
+
+    Returns:
+        True if all rooms are connected
+    """
+    if not regions:
+        return True
+
+    visited = set()
+    queue = deque([0])  # Start from first room
+
+    while queue:
+        u = queue.popleft()
+        if u not in visited:
+            visited.add(u)
+            for v in graph[u]:
+                if v not in visited:
+                    queue.append(v)
+
+    return len(visited) == len(regions)
+
+
+def generate_floor_layout(floor_no, length, width, target_rooms, total_floors, min_room_size=20, max_room_size=40):
     """
     Generate room layout for a single floor using BSP tree.
 
@@ -35,13 +264,13 @@ def generate_floor_layout(floor_no, length, width, target_rooms, min_room_size=2
     rooms = []
 
     # Split the space recursively
-    split_space(root, target_rooms, min_room_size, max_room_size)
+    split_space(root, target_rooms)
 
     # Collect leaf nodes as rooms
     leaf_nodes = get_leaf_nodes(root)
 
     # Assign room types based on rules
-    assign_room_types(leaf_nodes, floor_no)
+    assign_room_types(leaf_nodes, floor_no, total_floors)
 
     # Convert nodes to room dictionaries
     for i, node in enumerate(leaf_nodes):
@@ -60,54 +289,44 @@ def generate_floor_layout(floor_no, length, width, target_rooms, min_room_size=2
     return rooms
 
 
-def split_space(node, target_rooms, min_room_size, max_room_size, depth=0):
+def split_space(node, target_leaves):
     """
-    Recursively split space using BSP algorithm.
+    Simple BSP splitting to create target number of leaf regions.
 
     Args:
-        node: Current BSP node to split
-        target_rooms: Target number of rooms
-        min_room_size: Minimum room size
-        max_room_size: Maximum room size
-        depth: Current recursion depth
+        node: Root BSP node to split
+        target_leaves: Target number of leaf regions
+
+    Returns:
+        List of leaf nodes
     """
-    # Stop splitting if we have enough rooms or reached minimum size
-    if depth >= target_rooms - 1 or node.w < min_room_size * 2 or node.h < min_room_size * 2:
-        return
+    leaves = [node]
 
-    # Decide split orientation (horizontal or vertical)
-    can_split_horizontal = node.h >= min_room_size * 2
-    can_split_vertical = node.w >= min_room_size * 2
+    while len(leaves) < target_leaves:
+        if not leaves:
+            break
 
-    if not can_split_horizontal and not can_split_vertical:
-        return
+        leaf = leaves.pop(0)
 
-    if can_split_horizontal and can_split_vertical:
-        # Random choice with preference for vertical splits
-        split_horizontal = random.choice([True, False, False])  # 33% horizontal, 67% vertical
-    elif can_split_horizontal:
-        split_horizontal = True
-    else:
-        split_horizontal = False
+        # Skip if too small to split
+        if leaf.w < 20 or leaf.h < 20:
+            leaves.append(leaf)
+            continue
 
-    if split_horizontal:
-        # Split horizontally
-        split_ratio = random.uniform(0.3, 0.7)  # Avoid very thin rooms
-        split_pos = node.y + node.h * split_ratio
+        if leaf.w > leaf.h:
+            # Split vertically
+            split = random.uniform(0.45, 0.55)
+            left = BSPNode(leaf.x, leaf.y, leaf.w * split, leaf.h, leaf.floor)
+            right = BSPNode(leaf.x + leaf.w * split, leaf.y, leaf.w * (1 - split), leaf.h, leaf.floor)
+        else:
+            # Split horizontally
+            split = random.uniform(0.45, 0.55)
+            left = BSPNode(leaf.x, leaf.y, leaf.w, leaf.h * split, leaf.floor)
+            right = BSPNode(leaf.x, leaf.y + leaf.h * split, leaf.w, leaf.h * (1 - split), leaf.floor)
 
-        node.left = BSPNode(node.x, node.y, node.w, node.h * split_ratio, node.floor)
-        node.right = BSPNode(node.x, split_pos, node.w, node.h * (1 - split_ratio), node.floor)
-    else:
-        # Split vertically
-        split_ratio = random.uniform(0.3, 0.7)
-        split_pos = node.x + node.w * split_ratio
+        leaves.extend([left, right])
 
-        node.left = BSPNode(node.x, node.y, node.w * split_ratio, node.h, node.floor)
-        node.right = BSPNode(split_pos, node.y, node.w * (1 - split_ratio), node.h, node.floor)
-
-    # Recurse on children
-    split_space(node.left, target_rooms, min_room_size, max_room_size, depth + 1)
-    split_space(node.right, target_rooms, min_room_size, max_room_size, depth + 1)
+    return leaves
 
 
 def get_leaf_nodes(node):
@@ -132,23 +351,29 @@ def get_leaf_nodes(node):
     return leaves
 
 
-def assign_room_types(nodes, floor_no):
+def assign_room_types(nodes, floor_no, total_floors):
     """
     Assign room types to BSP leaf nodes based on rules.
 
     Args:
         nodes: List of leaf BSP nodes
         floor_no: Floor number
+        total_floors: Total number of floors in the house
     """
     # Mandatory rooms per floor
     mandatory_rooms = []
+
+    # Add stairway on all floors (same position across floors)
+    if total_floors > 1 and floor_no == 0:
+        mandatory_rooms.append('STAIR')
 
     # Every floor needs at least 1 bedroom and 1 hallway
     mandatory_rooms.append('BEDROOM')
     mandatory_rooms.append('HALL')
 
-    # Add stairway on all floors (same position across floors)
-    mandatory_rooms.append('STAIR')
+    # For multifloored houses, kitchen is mandatory only on first floor
+    if floor_no == 0:
+        mandatory_rooms.append('KITCHEN')
 
     # Assign mandatory rooms first
     assigned_count = 0
@@ -160,7 +385,9 @@ def assign_room_types(nodes, floor_no):
             break
 
     # Assign remaining rooms randomly from available types
-    available_types = ['BEDROOM', 'KITCHEN', 'BATH', 'LIVING', 'HALL']
+    # For multifloored houses, kitchen is only on first floor, so remove from available types
+    available_types = ['BEDROOM', 'BATH', 'LIVING', 'HALL']
+
     remaining_nodes = nodes[assigned_count:]
 
     for node in remaining_nodes:
@@ -204,43 +431,91 @@ def apply_global_rules(nodes):
                 node.room_type = random.choice(available_types)
 
 
-def generate_complete_house(length, width, floors, rooms_per_floor, min_room_size=20, max_room_size=40, kitchen_size=25, washroom_size=10):
+def generate_house(request):
     """
-    Generate complete house layout across all floors.
+    Generate house layout using rule-driven pipeline.
 
     Args:
-        length: House length
-        width: House width
-        floors: Number of floors
-        rooms_per_floor: Target rooms per floor
-        min_room_size: Minimum room size
-        max_room_size: Maximum room size
-        kitchen_size: Kitchen size preference
-        washroom_size: Washroom size preference
+        request: Dictionary with layout parameters
 
     Returns:
-        Dictionary with home layout data
+        Dictionary with generated layout
     """
+    # Extract parameters
+    length_m = request['length']
+    width_m = request['width']
+    floors = request['floors']
+    rooms_per_floor = request['rooms']
+    min_room_length = request['minRoomLength']
+    min_room_width = request['minRoomWidth']
+    kitchen_area = request['kitchenSize']
+    bath_area = request['washroomSize']
+
+    # 1. Normalize units
+    normalized = normalize_units(length_m, width_m)
+    scale_x = normalized['scale_x']
+    scale_y = normalized['scale_y']
+
     all_rooms = []
     room_id_counter = 1
+    max_attempts = 10  # Maximum regeneration attempts
 
     # Generate each floor
     for floor in range(floors):
-        floor_rooms = generate_floor_layout(floor, length, width, rooms_per_floor, min_room_size, max_room_size)
+        valid_layout = False
+        attempts = 0
 
-        # Adjust room IDs and add to complete list
-        for room in floor_rooms:
-            room['id'] = room_id_counter
-            room_id_counter += 1
+        while not valid_layout and attempts < max_attempts:
+            # 2. Generate room regions (BSP)
+            root = BSPNode(0, 0, 100, 100, floor)
+            regions = split_space(root, rooms_per_floor)
 
-        all_rooms.extend(floor_rooms)
+            # 3. Reserve special regions
+            # Stairs (only for multifloored)
+            assign_staircase(regions, floors)
 
-    # Apply global house rules
-    apply_house_rules(all_rooms, floors)
+            # Kitchen (floor 0 only)
+            if floor == 0:
+                assign_kitchen(regions, scale_x, scale_y, kitchen_area)
+
+            # 4. Assign bedroom + bath pairs
+            assign_bedroom_bath_pairs(regions, scale_x, scale_y, bath_area)
+
+            # 5. Assign hallway
+            assign_hallway(regions)
+
+            # 6. Build connectivity graph
+            graph = build_room_graph(regions)
+
+            # 7. BFS validate rules
+            valid_layout = bfs_validate(graph, regions)
+
+            attempts += 1
+
+        if not valid_layout:
+            # If we couldn't generate a valid layout, assign remaining as living rooms
+            for r in regions:
+                if r.room_type is None:
+                    r.room_type = 'LIVING'
+
+        # Convert to room dictionaries
+        for region in regions:
+            if region.room_type:
+                room = {
+                    'id': room_id_counter,
+                    'type': region.room_type,
+                    'floor': region.floor,
+                    'x': region.x,
+                    'y': region.y,
+                    'width': region.w,
+                    'height': region.h
+                }
+                all_rooms.append(room)
+                room_id_counter += 1
 
     return {
-        'length': length,
-        'width': width,
+        'length': length_m,
+        'width': width_m,
         'floors': floors,
         'rooms': all_rooms
     }

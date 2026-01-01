@@ -198,11 +198,12 @@ def validate_room_distribution(rooms, floors):
     if kitchen_count > 1:
         errors.append(f"House has {kitchen_count} kitchens, but only 1 is allowed")
 
-    # Rule: At least one stairway per floor
-    for floor in range(floors):
-        floor_stairs = [r for r in rooms if r['floor'] == floor and r['type'] == 'STAIR']
-        if not floor_stairs:
-            errors.append(f"Floor {floor} has no stairway")
+    # Rule: At least one stairway per floor for multifloored houses
+    if floors > 1:  # Only require stairs for multifloored houses
+        for floor in range(floors):
+            floor_stairs = [r for r in rooms if r['floor'] == floor and r['type'] == 'STAIR']
+            if not floor_stairs:
+                errors.append(f"Floor {floor} has no stairway")
 
     return len(errors) == 0, errors
 
