@@ -47,22 +47,25 @@ class SellPropertyDetailSerializer(serializers.ModelSerializer):
 
 class PropertyRequestSerializer(serializers.ModelSerializer):
     user_name = serializers.ReadOnlyField(source='user.username')
-    property_title = serializers.SerializerMethodField()
     sell_prop = SellPropertyDetailSerializer(read_only=True)
 
     class Meta:
         model = PropertyRequest
         fields = [
             'id', 'user_name', 'property', 'sell_prop', 
-            'property_title', 'request_type', 'status', 'created_at'
+            'request_type', 'status', 'created_at'
         ]
         read_only_fields = ['user', 'status', 'created_at']
 
-    def get_property_title(self, obj):
-        if obj.request_type == 'buy' and obj.property:
-            return obj.property.title
+    def to_representation(self, instance):
+        """
+        When reading data, we swap the simple Property ID for the FULL Property Object.
+        This allows the frontend to have instant access to images/prices without extra API calls.
+        """
+        response = super().to_representation(instance)
         
-        if obj.request_type == 'sell' and obj.sell_prop:
-            return obj.sell_prop.title
+        # If this is a BUY request (and has a property linked), serialize the full object
+        if instance.request_type == 'buy' and instance.property:
+            response['property'] = PropertySerializer(instance.property).data
             
-        return "Unknown Property"
+        return response
