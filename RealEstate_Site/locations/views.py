@@ -193,7 +193,7 @@ def bulk_add_waypoints(request):
         with transaction.atomic():  
             for item in waypoint_data_list:
                 loc = Location.objects.create(
-                    id=item['id'],
+                    #id=item['id'],
                     name=item['name'],
                     latitude=item['lat'],
                     longitude=item['long'],
