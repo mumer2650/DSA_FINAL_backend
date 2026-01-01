@@ -27,7 +27,7 @@ class FacilityInline(admin.TabularInline):
 
 @admin.register(Location)
 class LocationAdmin(admin.ModelAdmin):
-    list_display = ('name', 'location_type', 'latitude', 'longitude')
+    list_display = ('id', 'name', 'location_type', 'latitude', 'longitude')
     
     exclude = ('location_type',) 
 
