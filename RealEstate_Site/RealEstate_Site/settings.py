@@ -48,7 +48,8 @@ INSTALLED_APPS = [
     'properties',
     'maps',
     'blueprints',
-    'locations'
+    'locations',
+    'homebuilder'
 ]
 
 CLOUDINARY_STORAGE = {
