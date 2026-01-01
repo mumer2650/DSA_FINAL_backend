@@ -397,9 +397,8 @@ def submit_sell_request(request):
 def get_all_requests(request):
     user = request.user
 
-    queryset = PropertyRequest.objects.all()
-
-    queryset = queryset.select_related('user', 'property', 'sell_prop').order_by('-created_at')
+    # OPTIMIZATION CHECK: Ensure 'property' is inside select_related
+    queryset = PropertyRequest.objects.all().select_related('user', 'property', 'sell_prop').order_by('-created_at')
 
     serializer = PropertyRequestSerializer(queryset, many=True)
     
@@ -407,6 +406,8 @@ def get_all_requests(request):
         "count": queryset.count(),
         "requests": serializer.data
     })
+    
+    
 @api_view(['PATCH'])
 @permission_classes([IsAuthenticated])
 def manage_property_request(request, request_id):
