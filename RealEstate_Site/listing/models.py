@@ -14,7 +14,7 @@ class Property(models.Model):
     
     is_featured = models.BooleanField(default=False)
     
-    image = models.ImageField(upload_to='properties/')
+    image = models.ImageField(upload_to='properties/', null=True, blank=True)
     location_id = models.ForeignKey('locations.Location', on_delete=models.CASCADE, related_name='properties')
     created_at = models.DateTimeField(auto_now_add=True)
     
