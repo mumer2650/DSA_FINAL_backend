@@ -204,7 +204,7 @@ def validate_room_distribution(rooms, floors):
 
     # Rule: At least one stairway per floor for multifloored houses
     if floors > 1:  # Only require stairs for multifloored houses
-        for floor in range(floors):
+        for floor in range(floors-1):
             floor_stairs = [r for r in rooms if r['floor'] == floor and r['type'] == 'STAIR']
             if not floor_stairs:
                 errors.append(f"Floor {floor} has no stairway")

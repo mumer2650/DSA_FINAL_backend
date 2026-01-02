@@ -54,24 +54,47 @@ def area_in_meters(region, scale_x, scale_y):
     return (region.w * scale_x) * (region.h * scale_y)
 
 
-def assign_staircase(regions, floors):
+def assign_staircase(regions, floors, current_floor):
     """
-    Assign staircase to largest region if multifloored house.
+    Assign staircase in bottom-left corner for multifloored houses.
+    Top floor does not get stairs.
 
     Args:
-        regions: List of BSP regions
+        regions: List of BSP regions for current floor
         floors: Total number of floors
+        current_floor: Current floor number (0-based)
 
     Returns:
-        Stair region if assigned, None otherwise
+        Tuple: (stair_region, stair_position) if assigned, (None, None) otherwise
     """
-    if floors <= 1:
-        return None
+    # No stairs for single floor or top floor
+    if floors <= 1 or current_floor == floors - 1:
+        return None, None
 
-    # Find largest region for stairs
-    stair_region = max(regions, key=lambda r: r.w * r.h)
+    # Find suitable regions for stairs
+    suitable_regions = [r for r in regions if r.room_type is None]
+
+    if not suitable_regions:
+        return None, None
+
+    # For multifloored houses, place stairs in bottom-left corner area
+    # Look for regions in the bottom-left quadrant (x < 50, y > 50)
+    bottom_left_regions = [
+        r for r in suitable_regions
+        if r.x < 50 and (r.y + r.h) > 50  # Bottom-left area
+    ]
+
+    if bottom_left_regions:
+        # Choose the largest region in bottom-left
+        stair_region = max(bottom_left_regions, key=lambda r: r.w * r.h)
+    else:
+        # Fallback: choose any suitable region
+        stair_region = max(suitable_regions, key=lambda r: r.w * r.h)
+
     stair_region.room_type = 'STAIR'
-    return stair_region
+    stair_position = (round(stair_region.x, 1), round(stair_region.y, 1))
+
+    return stair_region, stair_position
 
 
 def assign_kitchen(regions, scale_x, scale_y, kitchen_area):
@@ -126,6 +149,39 @@ def assign_bedroom_bath_pairs(regions, scale_x, scale_y, bath_area):
     pairs = []
 
     while len(unassigned) >= 2:
+        # Assign largest available as bedroom
+        bedroom = max(unassigned, key=lambda r: r.w * r.h)
+        unassigned.remove(bedroom)
+        bedroom.room_type = 'BEDROOM'
+
+        # Assign next largest as bath
+        bath = max(unassigned, key=lambda r: r.w * r.h)
+        unassigned.remove(bath)
+        bath.room_type = 'BATH'
+
+        pairs.append((bedroom, bath))
+
+    return pairs
+
+
+def assign_bedroom_bath_pairs_limited(regions, max_pairs):
+    """
+    Assign limited number of bedroom and bath pairs from unassigned regions.
+
+    Args:
+        regions: List of BSP regions
+        max_pairs: Maximum number of pairs to create
+
+    Returns:
+        List of (bedroom, bath) pairs created
+    """
+    unassigned = [r for r in regions if r.room_type is None]
+    pairs = []
+
+    for _ in range(max_pairs):
+        if len(unassigned) < 2:
+            break
+
         # Assign largest available as bedroom
         bedroom = max(unassigned, key=lambda r: r.w * r.h)
         unassigned.remove(bedroom)
@@ -467,7 +523,9 @@ def generate_house(request):
 
     all_rooms = []
     room_id_counter = 1
-    max_attempts = 10  # Maximum regeneration attempts
+    # Increase attempts for multifloored houses (more complex connectivity)
+    max_attempts = 20 if floors <= 2 else 50
+
 
     # Generate each floor
     for floor in range(floors):
@@ -479,19 +537,27 @@ def generate_house(request):
             root = BSPNode(0, 0, 100, 100, floor)
             regions = split_space(root, rooms_per_floor)
 
-            # 3. Reserve special regions
-            # Hallway first (prefer elongated regions)
-            assign_hallway(regions)
+            # 3. Reserve special regions in priority order
+            assigned_count = 0
 
-            # Stairs (only for multifloored)
-            assign_staircase(regions, floors)
+            # Hallway first (prefer elongated regions)
+            if assign_hallway(regions):
+                assigned_count += 1
+
+            # Stairs (only for multifloored, not top floor)
+            stair_region, stair_pos = assign_staircase(regions, floors, floor)
+            if stair_region:
+                assigned_count += 1
 
             # Kitchen (floor 0 only)
-            if floor == 0:
-                assign_kitchen(regions, scale_x, scale_y, kitchen_area)
+            if floor == 0 and assign_kitchen(regions, scale_x, scale_y, kitchen_area):
+                assigned_count += 1
 
-            # 4. Assign bedroom + bath pairs
-            assign_bedroom_bath_pairs(regions, scale_x, scale_y, bath_area)
+            # 4. Assign bedroom + bath pairs to remaining regions
+            remaining_regions = rooms_per_floor - assigned_count
+            if remaining_regions >= 2:  # Need at least 2 regions for a pair
+                pairs_to_create = remaining_regions // 2  # Each pair needs 2 regions
+                assign_bedroom_bath_pairs_limited(regions, pairs_to_create)
 
             # 6. Build connectivity graph
             graph = build_room_graph(regions)
