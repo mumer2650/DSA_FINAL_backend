@@ -42,7 +42,9 @@ class HomeBuilderService:
             validation_result = comprehensive_validation(
                 graph=graph,
                 rooms=layout_data['rooms'],
-                floors=layout_data['floors']
+                floors=layout_data['floors'],
+                length_m=layout_data['length'],
+                width_m=layout_data['width']
             )
 
             if validation_result['is_valid']:
@@ -185,4 +187,4 @@ class HomeBuilderService:
 
         # Build graph and validate
         graph = build_connectivity_graph(rooms_data)
-        return comprehensive_validation(graph, rooms_data, home_layout.floors)
+        return comprehensive_validation(graph, rooms_data, home_layout.floors, home_layout.length, home_layout.width)

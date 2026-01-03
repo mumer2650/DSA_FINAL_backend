@@ -25,16 +25,18 @@ class Room(models.Model):
     Generic Room class representing individual rooms in a house layout.
     """
     ROOM_TYPES = [
-        ('BEDROOM', 'Bedroom'),
+        ('ATTACHED_BED_BATH', 'Attached Bedroom + Bath'),
         ('KITCHEN', 'Kitchen'),
-        ('BATH', 'Bathroom'),
         ('LIVING', 'Living Room'),
+        ('KITCHEN_LIVING_DINING_HUB', 'Kitchen Living Dining Hub'),
         ('HALL', 'Hallway'),
         ('STAIR', 'Stairway'),
+        ('STUDYROOM', 'Study Room'),
+        ('STORAGE', 'Storage'),
     ]
 
     home = models.ForeignKey(HomeLayout, related_name='rooms', on_delete=models.CASCADE)
-    room_type = models.CharField(max_length=20, choices=ROOM_TYPES)
+    room_type = models.CharField(max_length=30, choices=ROOM_TYPES)
     floor = models.IntegerField()  # Floor number (0-based)
     x = models.FloatField()  # X position (percentage-based)
     y = models.FloatField()  # Y position (percentage-based)
