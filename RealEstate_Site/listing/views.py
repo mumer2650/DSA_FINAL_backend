@@ -532,3 +532,36 @@ def delete_property_request(request, request_id):
             {"error": "Request not found or you are not authorized to cancel it."}, 
             status=status.HTTP_404_NOT_FOUND
         )
+        
+        
+@api_view(['GET'])
+def get_k_properties(request):
+    try:
+        k = int(request.query_params.get('k', 5))
+        sort_type = request.query_params.get('type', 'price') # 'price' or 'size'
+    except ValueError:
+        return Response({"error": "k must be an integer"}, status=status.HTTP_400_BAD_REQUEST)
+
+    from .heap import cheap_heap, size_heap
+    target_heap = cheap_heap if sort_type == 'price' else size_heap
+    
+    k = min(k, len(target_heap))
+    
+    extracted_items = []
+    temp_storage = []
+    
+    for _ in range(k):
+        if sort_type == 'price':
+            item = target_heap.extract_min()
+        else:
+            item = target_heap.extract_max() 
+            
+        if item:
+            temp_storage.append(item)
+            extracted_items.append(item[1])
+
+    for item in temp_storage:
+        target_heap.insert(item[1])
+
+    serializer = PropertySerializer(extracted_items, many=True)
+    return Response(serializer.data)
