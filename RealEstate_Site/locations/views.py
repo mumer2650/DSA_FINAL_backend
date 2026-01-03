@@ -4,7 +4,7 @@ from rest_framework import status
 from listing.models import Property
 from listing.serializers import PropertySerializer
 from .models import Facility, Location, WayPoint,Connection
-from .serializers import FacilitySerializer, BulkFacilitySerializer
+from .serializers import FacilitySerializer, BulkFacilitySerializer, ConnectionBulkSerializer
 from django.db import transaction
 from django.shortcuts import get_object_or_404
 
@@ -304,31 +304,28 @@ def bulk_add_waypoints(request):
     
 @api_view(['POST'])
 def bulk_connection_upload(request):
-    if not isinstance(request.data, list):
-        return Response({"error": "Expected a list."}, status=400)
-
-    created_count = 0
+    data = request.data
     errors = []
+    created_count = 0
 
-    for item in request.data:
-        from_id = item.get('from_location')
-        to_id = item.get('to_location')
-        
-        try:
-
+    for item in data:
+        serializer = ConnectionBulkSerializer(data=item)
+        if serializer.is_valid():
+            # get_or_create logic inside the loop
+            from_loc = serializer.validated_data['from_location']
+            to_loc = serializer.validated_data['to_location']
+            
             obj, created = Connection.objects.get_or_create(
-                from_location_id=from_id, 
-                to_location_id=to_id
+                from_location=from_loc,
+                to_location=to_loc
             )
             if created:
                 created_count += 1
-        except Exception as e:
-            errors.append({"pair": f"{from_id}-{to_id}", "error": str(e)})
+        else:
+            # This will tell you exactly which ID (from or to) failed validation
+            errors.append({"data": item, "error": serializer.errors})
 
-    return Response({
-        "message": f"Processed batch. {created_count} new connections created.",
-        "errors": errors
-    }, status=201)
+    return Response({"created": created_count, "errors": errors}, status=201)
  
 @api_view(['POST'])
 def bulk_add_facilities(request):

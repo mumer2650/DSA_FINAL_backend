@@ -6,8 +6,7 @@ from .graphs import graph
 
 @receiver(post_save, sender=Location)
 def connect_to_nearest_waypoint(sender, instance, created, **kwargs):
-    # Only run when a NEW location is created and it's NOT a waypoint itself
-    if created and instance.location_type in ['property', 'facility']:
+    if created and instance.location_type in ['property']:
         
         waypoints = Location.objects.filter(location_type='way_point')
         

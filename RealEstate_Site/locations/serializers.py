@@ -48,25 +48,37 @@ class ConnectionBulkSerializer(serializers.ModelSerializer):
         fields = ['from_location', 'to_location']
     
 class BulkFacilitySerializer(serializers.ModelSerializer):
+    # This is the fix: explicitly define 'id' as a simple integer field
+    # so it isn't treated as a ReadOnly auto-field during input
+    id = serializers.IntegerField() 
+    
     location_name = serializers.CharField(write_only=True)
     latitude = serializers.FloatField(write_only=True)
     longitude = serializers.FloatField(write_only=True)
 
     class Meta:
         model = Facility
+        # Make sure 'id' is here
         fields = ['id', 'name', 'type', 'location_name', 'latitude', 'longitude']
 
     def create(self, validated_data):
+        # Now validated_data.get('id') will actually contain 12356291488
+        manual_id = validated_data.pop('id') # Use pop to separate it from facility data
         loc_name = validated_data.pop('location_name')
         lat = validated_data.pop('latitude')
         lon = validated_data.pop('longitude')
 
+        # Create Location with your manual ID
         location_obj = Location.objects.create(
+            id=manual_id,  
             name=loc_name,
             latitude=lat,
             longitude=lon,
             location_type='facility'
         )
-
+        
+        # Create Facility. 
+        # Facility 'id' will still auto-increment normally (which is what you want)
+        # while its 'location' field points to your specific manual Location ID.
         facility = Facility.objects.create(location=location_obj, **validated_data)
         return facility
