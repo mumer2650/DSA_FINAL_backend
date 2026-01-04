@@ -45,8 +45,8 @@ INSTALLED_APPS = [
 
     'users',
     'listing',
-    'properties',
-    'maps',
+    # 'properties',
+    # 'maps',
     'locations',
     'homebuilder'
 ]
