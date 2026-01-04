@@ -57,11 +57,11 @@ class HomeBuilderService:
             raise ValueError(f"Could not generate valid layout after {HomeBuilderService.MAX_REGENERATION_ATTEMPTS} attempts")
 
         # Save layout to database
-        return HomeBuilderService._save_layout_to_database(user, valid_layout, graph)
+        return HomeBuilderService._save_layout_to_database(user, valid_layout, graph, request_data)
 
     @staticmethod
     @transaction.atomic
-    def _save_layout_to_database(user, layout_data, graph):
+    def _save_layout_to_database(user, layout_data, graph, request_payload=None):
         """
         Save generated layout and rooms to database.
 
@@ -69,6 +69,7 @@ class HomeBuilderService:
             user: User instance
             layout_data: Generated layout data
             graph: Connectivity graph
+            request_payload: Original request payload used to generate the layout
 
         Returns:
             HomeLayout instance
@@ -78,7 +79,8 @@ class HomeBuilderService:
             user=user,
             length=layout_data['length'],
             width=layout_data['width'],
-            floors=layout_data['floors']
+            floors=layout_data['floors'],
+            request_payload=request_payload or {}
         )
 
         # Create Room instances

@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth import get_user_model
+import json
 
 User = get_user_model()
 
@@ -11,6 +12,7 @@ class HomeLayout(models.Model):
     length = models.FloatField()  # Total length of the house
     width = models.FloatField()   # Total width of the house
     floors = models.IntegerField()  # Number of floors (1-3)
+    request_payload = models.JSONField(default=dict)  # Store the original request payload
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
