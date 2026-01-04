@@ -675,7 +675,7 @@ def split_space(node, target_leaves, min_room_length_m, min_room_width_m, scale_
         leaf = leaves.pop(0)
 
         # Skip if too small to split (using actual minimum room dimensions)
-        if leaf.w < min_room_width_internal * 2 or leaf.h < min_room_length_internal * 2:
+        if leaf.w < min_room_width_internal * 1.8 or leaf.h < min_room_length_internal * 1.8:
             leaves.append(leaf)
             continue
 
