@@ -82,6 +82,7 @@ class LayoutResponseSerializer(serializers.Serializer):
     Serializer for layout generation response.
     """
     home_id = serializers.IntegerField()
+    request_payload = serializers.DictField()
     rooms = serializers.ListField(child=serializers.DictField())
 
     def to_representation(self, instance):
@@ -105,6 +106,7 @@ class LayoutResponseSerializer(serializers.Serializer):
 
             return {
                 'home_id': instance.id,
+                'request_payload': instance.request_payload,
                 'rooms': rooms_data
             }
 
