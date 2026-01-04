@@ -7,6 +7,7 @@ class RoomSerializer(serializers.ModelSerializer):
     Serializer for individual rooms in a house layout.
     """
     adj = serializers.SerializerMethodField()
+    type = serializers.CharField(source='room_type', read_only=True)
 
     class Meta:
         model = Room
@@ -29,7 +30,7 @@ class HomeLayoutSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = HomeLayout
-        fields = ['id', 'length', 'width', 'floors', 'created_at', 'rooms']
+        fields = ['id', 'length', 'width', 'floors', 'request_payload', 'created_at', 'rooms']
 
 
 class LayoutRequestSerializer(serializers.Serializer):

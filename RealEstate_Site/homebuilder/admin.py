@@ -65,6 +65,11 @@ class HomeLayoutAdmin(admin.ModelAdmin):
             'classes': ('wide',),
             'description': 'Dimensions are in meters'
         }),
+        ('Request Payload', {
+            'fields': ('request_payload',),
+            'classes': ('wide', 'collapse'),
+            'description': 'Original request parameters used to generate this layout'
+        }),
         ('Layout Summary', {
             'fields': ('room_summary',),
             'classes': ('wide',),

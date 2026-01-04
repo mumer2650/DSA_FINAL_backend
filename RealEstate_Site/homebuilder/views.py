@@ -69,19 +69,24 @@ class UserLayoutsView(APIView):
             # Get user's layouts
             layouts = HomeBuilderService.get_user_layouts(request.user)
 
-            # Add adjacency data to each layout's rooms
+            # Process each layout to add adjacency data
+            processed_layouts = []
             for layout in layouts:
+                # Get layout with adjacency data
                 layout_with_adjacency = HomeBuilderService.get_layout_with_adjacency(
                     layout_id=layout.id,
                     user=request.user
                 )
+
                 if layout_with_adjacency:
-                    # Update rooms with adjacency data
-                    for room in layout.rooms.all():
-                        room.adjacent_rooms = getattr(layout_with_adjacency, 'adjacent_rooms', [])
+                    # Use the layout with adjacency data (rooms already have adjacent_rooms attached)
+                    processed_layouts.append(layout_with_adjacency)
+                else:
+                    # Fallback to original layout if adjacency calculation fails
+                    processed_layouts.append(layout)
 
             # Serialize layouts
-            serializer = HomeLayoutSerializer(layouts, many=True)
+            serializer = HomeLayoutSerializer(processed_layouts, many=True)
             return Response({'layouts': serializer.data}, status=status.HTTP_200_OK)
 
         except Exception as e:
