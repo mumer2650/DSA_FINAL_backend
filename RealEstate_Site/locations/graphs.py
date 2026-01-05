@@ -69,9 +69,53 @@ class LocationGraph:
         
         return found_facilities
     
+    # def dijkstra_shortest_path(self, from_id, to_id):
+    #     pq = PriorityQueue()
+    #     pq.push(0,from_id) 
+
+    #     distances = {node: float('inf') for node in self.adj_list}
+    #     distances[from_id] = 0
+        
+    #     parent = {node: None for node in self.adj_list}
+        
+    #     visited = set()
+
+    #     while not pq.is_empty():
+    #         curr_dist, curr_id = pq.pop()
+            
+    #         if curr_id == to_id:
+    #             path = []
+    #             temp_id = to_id
+    #             while temp_id is not None:
+    #                 path.append(temp_id)
+    #                 temp_id = parent[temp_id]
+                
+    #             return {
+    #                 "distance": round(curr_dist, 2),
+    #                 "path": path[::-1] # ye list ko reverse karne ke liye (source --> destination)
+    #             }
+
+    #         if curr_id in visited:
+    #             continue
+    #         visited.add(curr_id)
+
+    #         for neighbor_id, weight in self.adj_list.get(curr_id, []):
+    #             if neighbor_id in visited:
+    #                 continue
+                    
+    #             new_dist = curr_dist + weight
+                
+    #             if new_dist < distances[neighbor_id]:
+    #                 distances[neighbor_id] = new_dist
+    #                 parent[neighbor_id] = curr_id
+    #                 pq.push(new_dist,neighbor_id)
+
+    #     return {"distance": float("inf"), "path": []}
+    
     def dijkstra_shortest_path(self, from_id, to_id):
         pq = PriorityQueue()
-        pq.push(0,from_id) 
+        # FIX 1: Swap arguments to match (node_id, distance)
+        pq.push(from_id, 0) 
 
         distances = {node: float('inf') for node in self.adj_list}
         distances[from_id] = 0
@@ -81,8 +125,13 @@ class LocationGraph:
         visited = set()
 
         while not pq.is_empty():
-            curr_dist, curr_id = pq.pop()
+            # FIX 2: Swap unpack order. pq.pop() returns (node_id, distance)
+            curr_id, curr_dist = pq.pop() 
             
+            # Optimization: If current path is already longer than best known, skip
+            if curr_dist > distances[curr_id]:
+                continue
+
             if curr_id == to_id:
                 path = []
                 temp_id = to_id
@@ -92,7 +141,7 @@ class LocationGraph:
                 
                 return {
                     "distance": round(curr_dist, 2),
-                    "path": path[::-1] # ye list ko reverse karne ke liye (source --> destination)
+                    "path": path[::-1] 
                 }
 
             if curr_id in visited:
@@ -100,15 +149,13 @@ class LocationGraph:
             visited.add(curr_id)
 
             for neighbor_id, weight in self.adj_list.get(curr_id, []):
-                if neighbor_id in visited:
-                    continue
-                    
                 new_dist = curr_dist + weight
                 
                 if new_dist < distances[neighbor_id]:
                     distances[neighbor_id] = new_dist
                     parent[neighbor_id] = curr_id
-                    pq.push(new_dist,neighbor_id)
+                    # FIX 3: Swap arguments to match (node_id, distance)
+                    pq.push(neighbor_id, new_dist)
 
         return {"distance": float("inf"), "path": []}
     
