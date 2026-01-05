@@ -43,62 +43,6 @@ def get_all_facilities(request):
     return Response({"data":serialized.data},status=status.HTTP_200_OK)
 
 
-# @api_view(['GET'])
-# def get_shortest_path_distance(request):
-#     from_id = request.query_params.get('from_id')
-#     to_id = request.query_params.get('to_id')
-
-#     if not from_id or not to_id:
-#         return Response(
-#             {"error": "Please provide both from_id and to_id"}, 
-#             status=status.HTTP_400_BAD_REQUEST
-#         )
-
-#     try:
-#         from_id = int(from_id)
-#         to_id = int(to_id)
-        
-#         from .graphs import graph
-
-#         if not graph:
-#             return Response(
-#                 {"error": "Graph is not initialized"}, 
-#                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
-#             )
-            
-#         result = graph.dijkstra_shortest_path(from_id,to_id)
-#         distance = result['distance']
-#         path_ids = result['path']
-
-#         if distance == float('inf'):
-#             return Response(
-#                 {"error": "No path exists between these locations"}, 
-#                 status=status.HTTP_404_NOT_FOUND
-#             )
-
-#         edges = [
-#             {"from_id": path_ids[i], "to_id": path_ids[i+1]} 
-#             for i in range(len(path_ids) - 1)
-#         ]
-        
-#         loc_objs = Location.objects.filter(id__in=path_ids)
-#         loc_map = {loc.id: {"location_id": loc.id,"lat": loc.latitude, "lng": loc.longitude} for loc in loc_objs}
-        
-#         coordinates = [loc_map[node_id] for node_id in path_ids]
-
-#         return Response({
-#             "origin": graph.nodes_data[from_id]['name'],
-#             "destination": graph.nodes_data[to_id]['name'],
-#             "shortest_distance_km": distance,
-#             "path_nodes": path_ids,
-#             "nodes": coordinates,
-#             "edges": edges,
-#             "unit": "kilometers"
-#         }, status=status.HTTP_200_OK)
-#     except ValueError:
-#         return Response({"error": "IDs must be integers"}, status=status.HTTP_400_BAD_REQUEST)
-#     except Exception as e:
-#         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['GET'])
 def get_shortest_path_distance(request):

@@ -2,13 +2,9 @@ from django.contrib import admin
 from django.utils.html import format_html
 from .models import HomeLayout, Room
 
-
 class RoomInline(admin.TabularInline):
-    """
-    Inline admin for Room model within HomeLayout admin.
-    """
     model = Room
-    extra = 0  # Don't show extra empty forms
+    extra = 0
     fields = ('room_type', 'floor', 'x', 'y', 'width', 'height')
     readonly_fields = ('room_type', 'floor', 'x', 'y', 'width', 'height')
     can_delete = True
@@ -16,7 +12,7 @@ class RoomInline(admin.TabularInline):
     ordering = ('floor', 'room_type')
 
     def has_add_permission(self, request, obj=None):
-        return False  # Disable adding rooms directly from admin
+        return False
 
     def has_change_permission(self, request, obj=None):
         return True
@@ -24,13 +20,8 @@ class RoomInline(admin.TabularInline):
     def has_delete_permission(self, request, obj=None):
         return True
 
-
 @admin.register(HomeLayout)
 class HomeLayoutAdmin(admin.ModelAdmin):
-    """
-    Admin interface for HomeLayout model with full CRUD capabilities.
-    """
-    # List view configuration
     list_display = (
         'id',
         'user',
@@ -54,7 +45,6 @@ class HomeLayoutAdmin(admin.ModelAdmin):
     ordering = ('-created_at',)
     date_hierarchy = 'created_at'
 
-    # Detail view configuration
     fieldsets = (
         ('Basic Information', {
             'fields': ('user', 'floors', 'created_at'),
@@ -63,12 +53,10 @@ class HomeLayoutAdmin(admin.ModelAdmin):
         ('Dimensions', {
             'fields': ('length', 'width'),
             'classes': ('wide',),
-            'description': 'Dimensions are in meters'
         }),
         ('Request Payload', {
             'fields': ('request_payload',),
             'classes': ('wide', 'collapse'),
-            'description': 'Original request parameters used to generate this layout'
         }),
         ('Layout Summary', {
             'fields': ('room_summary',),
@@ -80,19 +68,16 @@ class HomeLayoutAdmin(admin.ModelAdmin):
     inlines = [RoomInline]
 
     def created_at_formatted(self, obj):
-        """Format the creation date for better readability."""
         return obj.created_at.strftime('%Y-%m-%d %H:%M')
     created_at_formatted.short_description = 'Created'
     created_at_formatted.admin_order_field = 'created_at'
 
     def total_rooms(self, obj):
-        """Display total number of rooms in this layout."""
         return obj.rooms.count()
     total_rooms.short_description = 'Total Rooms'
     total_rooms.admin_order_field = 'rooms__count'
 
     def room_summary(self, obj):
-        """Display a summary of room types in this layout."""
         rooms = obj.rooms.all()
         if not rooms:
             return "No rooms defined"
@@ -109,13 +94,10 @@ class HomeLayoutAdmin(admin.ModelAdmin):
         return format_html('<br>'.join(summary_parts))
     room_summary.short_description = 'Room Distribution'
 
-    # Custom actions
     actions = ['duplicate_layout']
 
     def duplicate_layout(self, request, queryset):
-        """Duplicate selected layouts (creates new instances with same dimensions)."""
         for layout in queryset:
-            # Create new layout with same properties
             new_layout = HomeLayout.objects.create(
                 user=layout.user,
                 length=layout.length,
@@ -123,7 +105,6 @@ class HomeLayoutAdmin(admin.ModelAdmin):
                 floors=layout.floors
             )
 
-            # Copy all rooms
             for room in layout.rooms.all():
                 Room.objects.create(
                     home=new_layout,
@@ -138,13 +119,8 @@ class HomeLayoutAdmin(admin.ModelAdmin):
         self.message_user(request, f"Successfully duplicated {queryset.count()} layout(s).")
     duplicate_layout.short_description = "Duplicate selected layouts"
 
-
 @admin.register(Room)
 class RoomAdmin(admin.ModelAdmin):
-    """
-    Admin interface for Room model.
-    """
-    # List view configuration
     list_display = (
         'id',
         'room_type',
@@ -166,7 +142,6 @@ class RoomAdmin(admin.ModelAdmin):
     )
     ordering = ('home', 'floor', 'room_type')
 
-    # Detail view configuration
     fieldsets = (
         ('Basic Information', {
             'fields': ('home', 'room_type', 'floor'),
@@ -175,23 +150,18 @@ class RoomAdmin(admin.ModelAdmin):
         ('Position & Dimensions', {
             'fields': ('x', 'y', 'width', 'height'),
             'classes': ('wide',),
-            'description': 'All values are in percentage (0-100) relative to floor dimensions'
         }),
     )
 
     def dimensions(self, obj):
-        """Display room dimensions in a readable format."""
         return f"{obj.width:.1f} × {obj.height:.1f}"
     dimensions.short_description = 'Size (W×H)'
     dimensions.admin_order_field = 'width'
 
     def position(self, obj):
-        """Display room position in a readable format."""
         return f"({obj.x:.1f}, {obj.y:.1f})"
     position.short_description = 'Position (X,Y)'
     position.admin_order_field = 'x'
 
-    # Override get_queryset to prefetch related data for performance
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('home', 'home__user')
-

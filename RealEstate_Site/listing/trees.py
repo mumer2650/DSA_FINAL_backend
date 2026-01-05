@@ -2,43 +2,48 @@ from typing import Optional
 from .models import Property
 
 class AVLNode:
-    def __init__(self, property_obj : Property,balance_field : str):
+    """
+    AVL Tree Node.
+    Attributes:
+        key: Balance field value (price/size)
+        properties: List of Property objects with same key
+        left, right: Child nodes
+        height: Node height for balancing
+    """
+    def __init__(self, property_obj, balance_field):
         self.key = getattr(property_obj, balance_field)
-
-        self.properties = [property_obj] 
-        self.left: Optional[AVLNode] = None
-        self.right: Optional[AVLNode] = None
+        self.properties = [property_obj]
+        self.left = None
+        self.right = None
         self.height = 1
     
-def getHeight(root : AVLNode):
+def getHeight(root):
     if root == None: return 0
-    
     return 1 + max(getHeight(root.left),getHeight(root.right))
 
-def rightRotation(root: AVLNode):
+def rightRotation(root):
     leftChild = root.left
     rightGrandChild = leftChild.right
-    
     leftChild.right = root
     root.left = rightGrandChild
-    
     return leftChild
 
-def leftRotation(root: AVLNode):
+def leftRotation(root):
     rightChild = root.right
     leftGrandChild = rightChild.left
-    
     rightChild.left = root
     root.right = leftGrandChild
-    
     return rightChild
 
-
 class AVL_Tree_Property:
-    def __init__(self,ballance_field="price"):
-        self.root: Optional[AVLNode] = None 
-        self.size: int = 0
-        self.balance_field = ballance_field
+    """
+    AVL Tree for Property objects.
+    Format: Self-balancing BST with duplicate keys stored in lists.
+    """
+    def __init__(self, balance_field="price"):
+        self.root = None
+        self.size = 0
+        self.balance_field = balance_field
         
     def get_node_height(self, node):
         return node.height if node else 0
@@ -93,29 +98,22 @@ class AVL_Tree_Property:
         node.height = 1 + max(self.get_node_height(node.left), self.get_node_height(node.right))
 
         balance = self.get_balance(node)
-        
 
-        # Left Left Case
         if balance > 1 and new_val < node.left.key:
             return self.rightRotation(node)
-        # Right Right Case
         if balance < -1 and new_val > node.right.key:
             return self.leftRotation(node)
-        # Left Right Case
         if balance > 1 and new_val > node.left.key:
             node.left = self.leftRotation(node.left)
             return self.rightRotation(node)
-        # Right Left Case
         if balance < -1 and new_val < node.right.key:
             node.right = self.rightRotation(node.right)
             return self.leftRotation(node)
 
         return node
-    
+
     def update_property(self, old_property_obj, new_property_obj):
-        
         self.delete(old_property_obj)
-        
         self.insert(new_property_obj)
     
     def delete(self, property_obj):
@@ -142,7 +140,7 @@ class AVL_Tree_Property:
             if len(node.properties) > 1:
                 node.properties = [p for p in node.properties if p.id != property_obj.id]
                 return node
-            
+
             if node.left is None:
                 return node.right
             elif node.right is None:

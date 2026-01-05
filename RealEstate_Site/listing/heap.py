@@ -1,8 +1,11 @@
 from typing import Optional
 from .models import Property
 
-
 class CheapPropertyHeap:
+    """
+    Min-heap for properties ordered by price.
+    Format: [(price, property_obj), ...]
+    """
     def __init__(self):
         self.heap  = []
 
@@ -22,12 +25,10 @@ class CheapPropertyHeap:
         return root
     
     def remove_by_id(self, property_id):
-
         for i in range(len(self.heap)):
             if self.heap[i][1].id == property_id:
                 self.heap[i] = self.heap[-1]
                 self.heap.pop()
-                
                 if i < len(self.heap):
                     self.heapify_down(i)
                     self.heapify_up(i)
@@ -62,11 +63,15 @@ class CheapPropertyHeap:
         return len(self.heap)
     
 class LargestPropertyHeap:
+    """
+    Max-heap for properties ordered by size.
+    Format: [(size, property_obj), ...]
+    """
     def __init__(self):
         self.heap = []
-        
-    def insert(self, property_obj :Property):
-        self.heap.append((property_obj.size,property_obj))
+
+    def insert(self, property_obj):
+        self.heap.append((property_obj.size, property_obj))
         self.heapify_up(len(self.heap) - 1)
 
     def extract_max(self):
