@@ -403,7 +403,7 @@ def assign_kitchen(regions, scale_x, scale_y, kitchen_area):
 def assign_room_types_to_zone(zone_regions, floor, total_floors, zone_idx, floor_requirements,
                               bedrooms_assigned, scale_x, scale_y):
     unassigned = sorted([r for r in zone_regions if r.room_type is None],
-                        key=lambda r: r.w * r.h, reverse=True)
+                        key=lambda r: r.w * r.h)
 
     bedrooms_assigned_to_zone = 0
 
@@ -534,10 +534,10 @@ def generate_house(request):
             zone_area_ratio = (zone.w * zone.h) / total_bsp_area if total_bsp_area > 0 else 1.0 / len(bsp_zones)
             print(f"Zone area ratio: {zone_area_ratio} for zone {zone_idx} in floor {floor}")
 
-            structural_reserve = max(1, floors)
-            available_rooms_for_bsp = max(1, total_rooms - structural_reserve)
+            # structural_reserve = max(1, floors)
+            # available_rooms_for_bsp = max(1, total_rooms - structural_reserve)
 
-            target_rooms = max(1, int(available_rooms_for_bsp * zone_area_ratio / floors))
+            target_rooms = max(1, int(total_rooms * zone_area_ratio / floors))
             print(f"Target rooms: {target_rooms} for zone {zone_idx} in floor {floor}")
             zone_regions = split_space(zone, target_rooms, min_room_length, min_room_width, scale_x, scale_y)
 
