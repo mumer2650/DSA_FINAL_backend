@@ -130,7 +130,7 @@ def validate_room_distribution(rooms, floors, layout_case=None, length_m=None, w
 
     for floor in range(floors):
         floor_bedrooms = [r for r in rooms if r['floor'] == floor and r['type'] == 'ATTACHED_BED_BATH']
-        if not floor_bedrooms:
+        if not floor_bedrooms and not floor == 0:
             errors.append(f"Floor {floor} has no attached bedrooms")
 
     for floor in range(floors):
