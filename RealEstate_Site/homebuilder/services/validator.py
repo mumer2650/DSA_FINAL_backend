@@ -76,43 +76,6 @@ def validate_connectivity(graph, rooms):
 
     return True, []
 
-def validate_kitchen_bath_rule(graph, rooms):
-    errors = []
-
-    kitchens = [room for room in rooms if room['type'] == 'KITCHEN']
-
-    for kitchen in kitchens:
-        kitchen_id = kitchen['id']
-        adjacent_rooms = graph.get(kitchen_id, [])
-
-        for adj_id in adjacent_rooms:
-            adj_room = next((r for r in rooms if r['id'] == adj_id), None)
-            if adj_room and adj_room['type'] == 'BATH':
-                errors.append(f"Kitchen on floor {kitchen['floor']} is directly connected to bathroom on floor {adj_room['floor']}")
-                break
-
-    return len(errors) == 0, errors
-
-def validate_bedroom_bath_rule(graph, rooms):
-    errors = []
-
-    bedrooms = [room for room in rooms if room['type'] == 'BEDROOM']
-
-    for bedroom in bedrooms:
-        bedroom_id = bedroom['id']
-        adjacent_rooms = graph.get(bedroom_id, [])
-
-        has_adjacent_bath = False
-        for adj_id in adjacent_rooms:
-            adj_room = next((r for r in rooms if r['id'] == adj_id), None)
-            if adj_room and adj_room['type'] == 'BATH':
-                has_adjacent_bath = True
-                break
-
-        if not has_adjacent_bath:
-            errors.append(f"Bedroom on floor {bedroom['floor']} has no adjacent bathroom")
-
-    return len(errors) == 0, errors
 
 def get_room_by_id(rooms, room_id):
     for room in rooms:
@@ -130,7 +93,7 @@ def validate_room_distribution(rooms, floors, layout_case=None, length_m=None, w
 
     for floor in range(floors):
         floor_bedrooms = [r for r in rooms if r['floor'] == floor and r['type'] == 'ATTACHED_BED_BATH']
-        if not floor_bedrooms:
+        if not floor_bedrooms and not floor == 0:
             errors.append(f"Floor {floor} has no attached bedrooms")
 
     for floor in range(floors):
@@ -185,3 +148,41 @@ def detect_layout_case(length_m, width_m):
         return "SINGLE_SIDED_HALL"
     else:
         return "COMPACT"
+
+# def validate_kitchen_bath_rule(graph, rooms):
+#     errors = []
+
+#     kitchens = [room for room in rooms if room['type'] == 'KITCHEN']
+
+#     for kitchen in kitchens:
+#         kitchen_id = kitchen['id']
+#         adjacent_rooms = graph.get(kitchen_id, [])
+
+#         for adj_id in adjacent_rooms:
+#             adj_room = next((r for r in rooms if r['id'] == adj_id), None)
+#             if adj_room and adj_room['type'] == 'BATH':
+#                 errors.append(f"Kitchen on floor {kitchen['floor']} is directly connected to bathroom on floor {adj_room['floor']}")
+#                 break
+
+#     return len(errors) == 0, errors
+
+# def validate_bedroom_bath_rule(graph, rooms):
+#     errors = []
+
+#     bedrooms = [room for room in rooms if room['type'] == 'BEDROOM']
+
+#     for bedroom in bedrooms:
+#         bedroom_id = bedroom['id']
+#         adjacent_rooms = graph.get(bedroom_id, [])
+
+#         has_adjacent_bath = False
+#         for adj_id in adjacent_rooms:
+#             adj_room = next((r for r in rooms if r['id'] == adj_id), None)
+#             if adj_room and adj_room['type'] == 'BATH':
+#                 has_adjacent_bath = True
+#                 break
+
+#         if not has_adjacent_bath:
+#             errors.append(f"Bedroom on floor {bedroom['floor']} has no adjacent bathroom")
+
+#     return len(errors) == 0, errors

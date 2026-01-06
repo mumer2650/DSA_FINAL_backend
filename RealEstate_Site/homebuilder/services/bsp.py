@@ -91,15 +91,6 @@ def create_structural_elements(length_m, width_m, floors, current_floor):
                 structural_regions.append(stairs)
                 hallway.h = hallway.h - stair_height_percent
 
-            left_bsp = BSPNode(
-                x=0,
-                y=kdl_height_percent,
-                w=45,
-                h=bsp_height_percent,
-                floor=current_floor
-            )
-            bsp_zones.append(left_bsp)
-
             right_bsp = BSPNode(
                 x=hallway.x + hallway.w,
                 y=0,
@@ -108,6 +99,15 @@ def create_structural_elements(length_m, width_m, floors, current_floor):
                 floor=current_floor
             )
             bsp_zones.append(right_bsp)
+
+            left_bsp = BSPNode(
+                x=0,
+                y=kdl_height_percent,
+                w=45,
+                h=bsp_height_percent,
+                floor=current_floor
+            )
+            bsp_zones.append(left_bsp)
 
         else:
             stair_height_percent = 20
@@ -295,15 +295,6 @@ def create_structural_elements(length_m, width_m, floors, current_floor):
             hallway.room_type = "HALL"
             structural_regions.append(hallway)
 
-            upper_bsp_zone = BSPNode(
-                x=stair_hall_width_percent + stair_hall_width_percent,
-                y=0,
-                w=upper_bsp_width_percent,
-                h=stair_hall_height_percent,
-                floor=current_floor
-            )
-            bsp_zones.append(upper_bsp_zone)
-
             bottom_bsp = BSPNode(
                 x=0,
                 y=stair_hall_height_percent,
@@ -313,14 +304,50 @@ def create_structural_elements(length_m, width_m, floors, current_floor):
             )
             bsp_zones.append(bottom_bsp)
 
+            upper_bsp_zone = BSPNode(
+                x=stair_hall_width_percent + stair_hall_width_percent,
+                y=0,
+                w=upper_bsp_width_percent,
+                h=stair_hall_height_percent,
+                floor=current_floor
+            )
+            bsp_zones.append(upper_bsp_zone)
+
     return structural_regions, bsp_zones
 
 def distribute_bedrooms_across_floors(total_bedrooms, floors):
-    bedrooms_per_floor = [total_bedrooms // floors] * floors
-    remainder = total_bedrooms % floors
+    if floors == 1:
+        return [total_bedrooms]
 
-    for i in range(remainder):
-        bedrooms_per_floor[i] += 1
+    bedrooms_per_floor = [0] * floors
+
+    # Ground floor gets fewer bedrooms (about 60% of what upper floors get)
+    ground_floor_bedrooms = max(1, total_bedrooms // (floors + 1))
+    bedrooms_per_floor[0] = ground_floor_bedrooms
+
+    # Distribute remaining bedrooms across upper floors
+    remaining_bedrooms = total_bedrooms - ground_floor_bedrooms
+    upper_floor_bedrooms = remaining_bedrooms // (floors - 1)
+    remainder = remaining_bedrooms % (floors - 1)
+
+    for i in range(1, floors):
+        bedrooms_per_floor[i] = upper_floor_bedrooms
+        if i - 1 < remainder:
+            bedrooms_per_floor[i] += 1
+
+    # Ensure ground floor doesn't get more than upper floors
+    max_upper = max(bedrooms_per_floor[1:]) if floors > 1 else 0
+    if bedrooms_per_floor[0] > max_upper and max_upper > 0:
+        extra = bedrooms_per_floor[0] - max_upper
+        bedrooms_per_floor[0] = max_upper
+
+        # Redistribute extra bedrooms to upper floors
+        for i in range(1, floors):
+            if extra > 0:
+                bedrooms_per_floor[i] += 1
+                extra -= 1
+                if extra == 0:
+                    break
 
     return bedrooms_per_floor
 
@@ -332,27 +359,21 @@ def get_floor_room_requirements(total_rooms, bedrooms_per_floor, floors, current
         'LIVING': 0
     }
 
-    if floors >= 3:
-        if current_floor == floors - 1:
-            requirements['STORAGE'] = 1
-        elif current_floor == 1:
-            requirements['STUDYROOM'] = 1
-    elif floors == 2:
-        if current_floor == 1:
-            requirements['STUDYROOM'] = 1
-            requirements['STORAGE'] = 1
-
-    used_slots = (requirements['ATTACHED_BED_BATH'] +
-                  requirements['STUDYROOM'] +
-                  requirements['STORAGE'])
-
     if current_floor == 0:
-        requirements['LIVING'] = 0
+            requirements['STUDYROOM'] = 1
+            requirements['STORAGE'] = 1
     else:
+        if floors >= 3 and current_floor == floors - 1:
+            requirements['STORAGE'] = 1
+
+    if current_floor > 0:
         remaining_house_rooms = total_rooms - sum(bedrooms_per_floor)
         if floors > 1:
             living_per_upper_floor = remaining_house_rooms // (floors - 1)
-            requirements['LIVING'] = max(0, living_per_upper_floor - used_slots + requirements['ATTACHED_BED_BATH'] + requirements['STUDYROOM'] + requirements['STORAGE'])
+            used_slots = (requirements['ATTACHED_BED_BATH'] +
+                         requirements['STUDYROOM'] +
+                         requirements['STORAGE'])
+            requirements['LIVING'] = max(0, living_per_upper_floor - used_slots)
 
     return requirements
 
@@ -407,28 +428,46 @@ def assign_room_types_to_zone(zone_regions, floor, total_floors, zone_idx, floor
 
     bedrooms_assigned_to_zone = 0
 
-    bedrooms_needed = floor_requirements['ATTACHED_BED_BATH'] - bedrooms_assigned
-    bedrooms_to_assign = min(bedrooms_needed, len(unassigned))
-
-    for i in range(bedrooms_to_assign):
-        if unassigned:
+    if floor == 0:
+        if floor_requirements['STUDYROOM'] > 0 and unassigned:
             region = unassigned.pop(0)
-            region.room_type = 'ATTACHED_BED_BATH'
-            bedrooms_assigned_to_zone += 1
+            region.room_type = 'STUDYROOM'
 
-    if floor_requirements['STUDYROOM'] > 0 and unassigned:
-        region = unassigned.pop(0)
-        region.room_type = 'STUDYROOM'
+        if floor_requirements['STORAGE'] > 0 and unassigned:
+            region = unassigned.pop(0)
+            region.room_type = 'STORAGE'
 
-    if floor_requirements['STORAGE'] > 0 and unassigned:
-        region = unassigned.pop(0)
-        region.room_type = 'STORAGE'
+        bedrooms_needed = floor_requirements['ATTACHED_BED_BATH'] - bedrooms_assigned
+        bedrooms_to_assign = min(bedrooms_needed, len(unassigned))
+
+        for i in range(bedrooms_to_assign):
+            if unassigned:
+                region = unassigned.pop(0)
+                region.room_type = 'ATTACHED_BED_BATH'
+                bedrooms_assigned_to_zone += 1
+    else:
+        bedrooms_needed = floor_requirements['ATTACHED_BED_BATH'] - bedrooms_assigned
+        bedrooms_to_assign = min(bedrooms_needed, len(unassigned))
+
+        for i in range(bedrooms_to_assign):
+            if unassigned:
+                region = unassigned.pop(0)
+                region.room_type = 'ATTACHED_BED_BATH'
+                bedrooms_assigned_to_zone += 1
+
+        if floor_requirements['STUDYROOM'] > 0 and unassigned:
+            region = unassigned.pop(0)
+            region.room_type = 'STUDYROOM'
+
+        if floor_requirements['STORAGE'] > 0 and unassigned:
+            region = unassigned.pop(0)
+            region.room_type = 'STORAGE'
 
     for region in unassigned:
         if floor > 0:
             region.room_type = 'LIVING'
         else:
-            region.room_type = 'LIVING'
+            region.room_type = None
 
     return zone_regions, bedrooms_assigned_to_zone
 
