@@ -91,6 +91,15 @@ def create_structural_elements(length_m, width_m, floors, current_floor):
                 structural_regions.append(stairs)
                 hallway.h = hallway.h - stair_height_percent
 
+            left_bsp = BSPNode(
+                x=0,
+                y=kdl_height_percent,
+                w=45,
+                h=bsp_height_percent,
+                floor=current_floor
+            )
+            bsp_zones.append(left_bsp)
+
             right_bsp = BSPNode(
                 x=hallway.x + hallway.w,
                 y=0,
@@ -295,6 +304,15 @@ def create_structural_elements(length_m, width_m, floors, current_floor):
             hallway.room_type = "HALL"
             structural_regions.append(hallway)
 
+            upper_bsp_zone = BSPNode(
+                x=stair_hall_width_percent + stair_hall_width_percent,
+                y=0,
+                w=upper_bsp_width_percent,
+                h=stair_hall_height_percent,
+                floor=current_floor
+            )
+            bsp_zones.append(upper_bsp_zone)
+
             bottom_bsp = BSPNode(
                 x=0,
                 y=stair_hall_height_percent,
@@ -321,11 +339,9 @@ def distribute_bedrooms_across_floors(total_bedrooms, floors):
 
     bedrooms_per_floor = [0] * floors
 
-    # Ground floor gets fewer bedrooms (about 60% of what upper floors get)
     ground_floor_bedrooms = max(1, total_bedrooms // (floors + 1))
     bedrooms_per_floor[0] = ground_floor_bedrooms
 
-    # Distribute remaining bedrooms across upper floors
     remaining_bedrooms = total_bedrooms - ground_floor_bedrooms
     upper_floor_bedrooms = remaining_bedrooms // (floors - 1)
     remainder = remaining_bedrooms % (floors - 1)
@@ -335,21 +351,22 @@ def distribute_bedrooms_across_floors(total_bedrooms, floors):
         if i - 1 < remainder:
             bedrooms_per_floor[i] += 1
 
-    # Ensure ground floor doesn't get more than upper floors
     max_upper = max(bedrooms_per_floor[1:]) if floors > 1 else 0
     if bedrooms_per_floor[0] > max_upper and max_upper > 0:
         extra = bedrooms_per_floor[0] - max_upper
         bedrooms_per_floor[0] = max_upper
 
-        # Redistribute extra bedrooms to upper floors
         for i in range(1, floors):
             if extra > 0:
                 bedrooms_per_floor[i] += 1
                 extra -= 1
                 if extra == 0:
                     break
+    
+    print(f"Distributed bedrooms per floor: {bedrooms_per_floor}")
 
     return bedrooms_per_floor
+
 
 def get_floor_room_requirements(total_rooms, bedrooms_per_floor, floors, current_floor):
     requirements = {
@@ -377,29 +394,6 @@ def get_floor_room_requirements(total_rooms, bedrooms_per_floor, floors, current
 
     return requirements
 
-def assign_staircase(regions, floors, current_floor):
-    if floors <= 1 or current_floor == floors - 1:
-        return None, None
-
-    suitable_regions = [r for r in regions if r.room_type is None]
-
-    if not suitable_regions:
-        return None, None
-
-    bottom_left_regions = [
-        r for r in suitable_regions
-        if r.x < 50 and (r.y + r.h) > 50
-    ]
-
-    if bottom_left_regions:
-        stair_region = max(bottom_left_regions, key=lambda r: r.w * r.h)
-    else:
-        stair_region = max(suitable_regions, key=lambda r: r.w * r.h)
-
-    stair_region.room_type = 'STAIR'
-    stair_position = (round(stair_region.x, 1), round(stair_region.y, 1))
-
-    return stair_region, stair_position
 
 def assign_kitchen(regions, scale_x, scale_y, kitchen_area):
     floor_0_regions = [r for r in regions if r.floor == 0 and r.room_type is None]
@@ -424,7 +418,7 @@ def assign_kitchen(regions, scale_x, scale_y, kitchen_area):
 def assign_room_types_to_zone(zone_regions, floor, total_floors, zone_idx, floor_requirements,
                               bedrooms_assigned, scale_x, scale_y):
     unassigned = sorted([r for r in zone_regions if r.room_type is None],
-                        key=lambda r: r.w * r.h, reverse=True)
+                        key=lambda r: r.w * r.h)
 
     bedrooms_assigned_to_zone = 0
 
@@ -432,10 +426,12 @@ def assign_room_types_to_zone(zone_regions, floor, total_floors, zone_idx, floor
         if floor_requirements['STUDYROOM'] > 0 and unassigned:
             region = unassigned.pop(0)
             region.room_type = 'STUDYROOM'
+            floor_requirements['STUDYROOM'] -= 1
 
         if floor_requirements['STORAGE'] > 0 and unassigned:
             region = unassigned.pop(0)
             region.room_type = 'STORAGE'
+            floor_requirements['STORAGE'] -= 1
 
         bedrooms_needed = floor_requirements['ATTACHED_BED_BATH'] - bedrooms_assigned
         bedrooms_to_assign = min(bedrooms_needed, len(unassigned))
@@ -458,12 +454,15 @@ def assign_room_types_to_zone(zone_regions, floor, total_floors, zone_idx, floor
         if floor_requirements['STUDYROOM'] > 0 and unassigned:
             region = unassigned.pop(0)
             region.room_type = 'STUDYROOM'
+            floor_requirements['STUDYROOM'] -= 1
 
         if floor_requirements['STORAGE'] > 0 and unassigned:
             region = unassigned.pop(0)
             region.room_type = 'STORAGE'
-
+            floor_requirements['STORAGE'] -= 1
+        isKitchenAssigned = False
     for region in unassigned:
+        print(f"Unassigned region on floor {floor}, zone {zone_idx}: {region.w}x{region.h}")
         if floor > 0:
             region.room_type = 'LIVING'
         else:
@@ -471,22 +470,9 @@ def assign_room_types_to_zone(zone_regions, floor, total_floors, zone_idx, floor
 
     return zone_regions, bedrooms_assigned_to_zone
 
-def assign_hallway(regions):
-    unassigned = [r for r in regions if r.room_type is None]
-    if not unassigned:
-        return None
 
-    elongated_regions = [r for r in unassigned if r.w > r.h]
 
-    if elongated_regions:
-        hallway = max(elongated_regions, key=lambda r: r.w)
-    else:
-        hallway = max(unassigned, key=lambda r: r.w * r.h)
-
-    hallway.room_type = 'HALL'
-    return hallway
-
-def split_space(node, target_leaves, min_room_length_m, min_room_width_m, scale_x, scale_y):
+def split_space(node, target_leaves, min_room_length_m, min_room_width_m, scale_x, scale_y, layout_case):
     print(f"split_space called: zone size {node.w}x{node.h}, target_leaves={target_leaves}")
 
     min_room_width_internal = min_room_width_m / scale_x
@@ -508,9 +494,15 @@ def split_space(node, target_leaves, min_room_length_m, min_room_width_m, scale_
 
         leaf = leaves.pop(0)
 
-        if leaf.w < min_room_width_internal * 2 or leaf.h < min_room_length_internal * 2:
-            leaves.append(leaf)
-            continue
+        if(layout_case == "DOUBLE_SIDED_HALL"):
+            print("  DOUBLE_SIDED_HALL layout - applying relaxed splitting criteria")
+            if leaf.w < min_room_width_internal * 1.8 or leaf.h < min_room_length_internal * 1.8:
+                leaves.append(leaf)
+                continue
+        else:
+            if leaf.w < min_room_width_internal * 2 or leaf.h < min_room_length_internal * 2:
+                leaves.append(leaf)
+                continue
 
         if leaf.w > leaf.h:
             split = random.uniform(0.4, 0.6)
@@ -573,12 +565,15 @@ def generate_house(request):
             zone_area_ratio = (zone.w * zone.h) / total_bsp_area if total_bsp_area > 0 else 1.0 / len(bsp_zones)
             print(f"Zone area ratio: {zone_area_ratio} for zone {zone_idx} in floor {floor}")
 
+            # structural_reserve = max(1, floors)
+            # available_rooms_for_bsp = max(1, total_rooms - structural_reserve)
+
             structural_reserve = max(1, floors)
             available_rooms_for_bsp = max(1, total_rooms - structural_reserve)
 
             target_rooms = max(1, int(available_rooms_for_bsp * zone_area_ratio / floors))
             print(f"Target rooms: {target_rooms} for zone {zone_idx} in floor {floor}")
-            zone_regions = split_space(zone, target_rooms, min_room_length, min_room_width, scale_x, scale_y)
+            zone_regions = split_space(zone, target_rooms, min_room_length, min_room_width, scale_x, scale_y, detect_layout_case(length_m, width_m) )
 
             zone_regions, bedrooms_assigned = assign_room_types_to_zone(
                 zone_regions, floor, floors, zone_idx, floor_requirements,
@@ -592,6 +587,8 @@ def generate_house(request):
             if region.room_type is None:
                 if floor > 0:
                     region.room_type = 'LIVING'
+                elif floor == floors - 1:
+                    region.room_type = 'KITCHEN'
                 else:
                     region.room_type = 'LIVING'
 
@@ -616,118 +613,3 @@ def generate_house(request):
         'rooms': all_rooms
     }
 
-def generate_floor_layout(floor_no, length, width, target_rooms, total_floors, min_room_size=20, max_room_size=40):
-    root = BSPNode(0, 0, length, width, floor_no)
-    rooms = []
-
-    split_space(root, target_rooms)
-
-    leaf_nodes = get_leaf_nodes(root)
-
-    assign_room_types(leaf_nodes, floor_no, total_floors)
-
-    for i, node in enumerate(leaf_nodes):
-        if node.room_type:
-            room = {
-                'id': i + 1,
-                'type': node.room_type,
-                'floor': node.floor,
-                'x': node.x,
-                'y': node.y,
-                'width': node.w,
-                'height': node.h
-            }
-            rooms.append(room)
-
-    return rooms
-
-def assign_bedroom_bath_pairs(regions, scale_x, scale_y, bath_area):
-    unassigned = [r for r in regions if r.room_type is None]
-    pairs = []
-
-    while len(unassigned) >= 2:
-        bedroom = max(unassigned, key=lambda r: r.w * r.h)
-        unassigned.remove(bedroom)
-        bedroom.room_type = 'BEDROOM'
-
-        bath = max(unassigned, key=lambda r: r.w * r.h)
-        unassigned.remove(bath)
-        bath.room_type = 'BATH'
-
-        pairs.append((bedroom, bath))
-
-    return pairs
-
-def assign_bedroom_bath_pairs_limited(regions, max_pairs):
-    unassigned = [r for r in regions if r.room_type is None]
-    pairs = []
-
-    for _ in range(max_pairs):
-        if len(unassigned) < 2:
-            break
-
-        bedroom = max(unassigned, key=lambda r: r.w * r.h)
-        unassigned.remove(bedroom)
-        bedroom.room_type = 'BEDROOM'
-
-        bath = max(unassigned, key=lambda r: r.w * r.h)
-        unassigned.remove(bath)
-        bath.room_type = 'BATH'
-
-        pairs.append((bedroom, bath))
-
-    return pairs
-
-def assign_room_types(nodes, floor_no, total_floors):
-    mandatory_rooms = []
-
-    if total_floors > 1 and floor_no == 0:
-        mandatory_rooms.append('STAIR')
-
-    mandatory_rooms.append('BEDROOM')
-    mandatory_rooms.append('HALL')
-
-    if floor_no == 0:
-        mandatory_rooms.append('KITCHEN')
-
-    assigned_count = 0
-    for node in nodes:
-        if assigned_count < len(mandatory_rooms):
-            node.room_type = mandatory_rooms[assigned_count]
-            assigned_count += 1
-        else:
-            break
-
-    available_types = ['BEDROOM', 'BATH', 'LIVING', 'HALL']
-
-    remaining_nodes = nodes[assigned_count:]
-
-    for node in remaining_nodes:
-        node.room_type = random.choice(available_types)
-
-    apply_global_rules(nodes)
-
-def apply_global_rules(nodes):
-    room_counts = defaultdict(int)
-    room_positions = {}
-
-    for node in nodes:
-        room_counts[node.room_type] += 1
-        room_positions[node.room_type] = (node.x, node.y)
-
-    max_same_type = max(3, len(nodes) // 3)
-
-    for room_type, count in room_counts.items():
-        if count > max_same_type and room_type not in ['STAIR', 'HALL']:
-            excess = count - max_same_type
-            nodes_to_change = [n for n in nodes if n.room_type == room_type][:excess]
-
-            for node in nodes_to_change:
-                available_types = [t for t in ['BEDROOM', 'BATH', 'LIVING'] if t != room_type]
-                node.room_type = random.choice(available_types)
-
-def apply_house_rules(all_rooms, floors):
-    kitchens = [r for r in all_rooms if r['type'] == 'KITCHEN']
-    if len(kitchens) > 1:
-        for kitchen in kitchens[1:]:
-            kitchen['type'] = 'LIVING'
