@@ -2,51 +2,98 @@ from .models import Favorite
 from .stack import Stack
 
 class FavoriteHashMap:
-    """
-    HashMap for user favorites.
-    Format: {user_id: set(property_ids)}
-    """
-    def __init__(self):
-        self._storage = {}
+    def __init__(self, size=1000):
+        self.size = size
+        self._storage = [[] for _ in range(self.size)]
 
-    def load_user_favorites(self, user_id):
-        fav_ids = Favorite.objects.filter(user_id=user_id).values_list('property_id', flat=True)
-        self._storage[user_id] = set(fav_ids)
-
+    def _hash(self, key):
+        return hash(key) % self.size
+    
     def is_favorite(self, user_id, property_id):
-        if user_id not in self._storage:
+        fav_set = self.get_val(user_id)
+        if fav_set is None:
             self.load_user_favorites(user_id)
-        return property_id in self._storage.get(user_id, set())
+            fav_set = self.get_val(user_id)
+        
+        return property_id in fav_set if fav_set else False
 
     def add_favorite(self, user_id, property_id):
-        if user_id not in self._storage:
+        fav_set = self.get_val(user_id)
+        if fav_set is None:
             self.load_user_favorites(user_id)
-        self._storage[user_id].add(property_id)
+            fav_set = self.get_val(user_id)
+        
+        if fav_set is not None:
+            fav_set.add(property_id)
+
+
+    def set_val(self, user_id, fav_set):
+        index = self._hash(user_id)
+        bucket = self._storage[index]
+        
+        for i, (uid, fset) in enumerate(bucket):
+            if uid == user_id:
+                bucket[i] = (user_id, fav_set)
+                return
+        
+        bucket.append((user_id, fav_set))
+
+    def get_val(self, user_id):
+        index = self._hash(user_id)
+        bucket = self._storage[index]
+        
+        for uid, fset in bucket:
+            if uid == user_id:
+                return fset
+        return None
+
+            
+    def load_user_favorites(self, user_id):
+        fav_ids = Favorite.objects.filter(user_id=user_id).values_list('property_id', flat=True)
+        self.set_val(user_id, set(fav_ids))
 
     def remove_favorite(self, user_id, property_id):
-        if user_id in self._storage:
-            self._storage[user_id].discard(property_id)
+        fav_set = self.get_val(user_id)
+        if fav_set:
+            fav_set.discard(property_id)
 
     def get_all_for_user(self, user_id):
-        if user_id not in self._storage:
+        fav_set = self.get_val(user_id)
+        if fav_set is None:
             self.load_user_favorites(user_id)
-        return list(self._storage.get(user_id, set()))
-
+            fav_set = self.get_val(user_id)
+        
+        return list(fav_set) if fav_set else []
+    
 class RecentlyViewedProperty:
-    """
-    Recently viewed properties using Stack.
-    Format: {user_id: Stack(max_size=10)}
-    """
-    def __init__(self):
-        self._storage = {}
+    def __init__(self, size=1000):
+        self.size = size
+        self._storage = [[] for _ in range(self.size)]
+
+    def _hash(self, key):
+        return hash(key) % self.size
+
+    def _get_stack(self, user_id):
+        index = self._hash(user_id)
+        bucket = self._storage[index]
+        
+        for uid, stack_obj in bucket:
+            if uid == user_id:
+                return stack_obj
+        return None
 
     def add_view(self, user_id, property_id):
-        if user_id not in self._storage:
-            self._storage[user_id] = Stack(max_size=10)
-        self._storage[user_id].push(property_id)
+        user_stack = self._get_stack(user_id)
+        
+        if user_stack is None:
+            user_stack = Stack(max_size=10)
+            index = self._hash(user_id)
+            self._storage[index].append((user_id, user_stack))
+        
+        user_stack.push(property_id)
 
     def get_history(self, user_id):
-        user_stack = self._storage.get(user_id)
+        user_stack = self._get_stack(user_id)
         if user_stack:
             return user_stack.get_all()
         return []
