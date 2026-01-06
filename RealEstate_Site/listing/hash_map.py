@@ -97,16 +97,18 @@ class RecentlyViewedProperty:
         if user_stack:
             return user_stack.get_all()
         return []
-   
+
 class SearchCache:
+    """
+    Search query cache using Stack.
+    Format: {user_id: Stack(max_size=10)}
+    """
     def __init__(self):
-        # Format { user_id : StackObject }
         self._storage = {}
 
     def add_query(self, user_id, query):
         if user_id not in self._storage:
             self._storage[user_id] = Stack(max_size=10)
-        #ye jab search ki api bnao ge tab use karna
         self._storage[user_id].push(query)
 
     def get_search_history(self, user_id):

@@ -1,74 +1,12 @@
 from collections import defaultdict
 
-
-# def are_adjacent(room1, room2):
-#     """
-#     Check if two rooms are adjacent (share a wall).
-
-#     Args:
-#         room1, room2: Room dictionaries
-
-#     Returns:
-#         True if rooms share a wall
-#     """
-#     # Must be on the same floor
-#     if room1['floor'] != room2['floor']:
-#         return False
-
-#     # Calculate boundaries
-#     r1_left = room1['x']
-#     r1_right = room1['x'] + room1['width']
-#     r1_top = room1['y']
-#     r1_bottom = room1['y'] + room1['height']
-
-#     r2_left = room2['x']
-#     r2_right = room2['x'] + room2['width']
-#     r2_top = room2['y']
-#     r2_bottom = room2['y'] + room2['height']
-
-#     # Tolerance for floating point precision
-#     tolerance = 0.1
-
-#     # Horizontal adjacency (same y-level)
-#     horizontal_adj = (
-#         abs(r1_bottom - r2_top) < tolerance or abs(r2_bottom - r1_top) < tolerance
-#     ) and (
-#         (r1_left < r2_right - tolerance and r1_right > r2_left + tolerance) or
-#         (r2_left < r1_right - tolerance and r2_right > r1_left + tolerance)
-#     )
-
-#     # Vertical adjacency (same x-level)
-#     vertical_adj = (
-#         abs(r1_right - r2_left) < tolerance or abs(r2_right - r1_left) < tolerance
-#     ) and (
-#         (r1_top < r2_bottom - tolerance and r1_bottom > r2_top + tolerance) or
-#         (r2_top < r1_bottom - tolerance and r2_bottom > r1_top + tolerance)
-#     )
-
-#     return horizontal_adj or vertical_adj
-
-
 def build_connectivity_graph(rooms):
     """
-    Build a connectivity graph with updated architectural connection rules.
-
-    Connection Rules (ONLY THESE):
-    - KDL_HUB <-> adjacent rooms (HALL, STAIR, BSP rooms)
-    - HALL <-> adjacent rooms (KDL, STAIR, BSP rooms)
-    - STAIR <-> STAIR (vertical only, same x/y)
-    -  Do NOT connect: BSP ↔ BSP directly, Bedroom ↔ Bedroom implicitly,
-      Rooms across hallway unless they share a boundary
-    - Adjacency = shared edge, not proximity
-
-    Args:
-        rooms: List of room dictionaries
-
-    Returns:
-        Dictionary representing adjacency list: {room_id: [adjacent_room_ids]}
+    Build adjacency graph for rooms.
+    Returns: dict {room_id: [adjacent_room_ids]}
     """
     graph = defaultdict(list)
 
-    # Group rooms by floor and type for easier processing
     rooms_by_floor = defaultdict(list)
     stairways = []
     hallways = []
@@ -83,10 +21,8 @@ def build_connectivity_graph(rooms):
         elif room['type'] == 'KITCHEN_LIVING_DINING_HUB':
             kdl_hubs.append(room)
 
-    # Rule 1: KDL_HUB <-> adjacent rooms (HALL, STAIR, BSP rooms)
     for kdl_hub in kdl_hubs:
         floor_rooms = rooms_by_floor[kdl_hub['floor']]
-        # KDL connects to HALL, STAIR, and BSP rooms (LIVING, ATTACHED_BED_BATH, STUDYROOM, STORAGE)
         connectable_types = ['HALL', 'STAIR', 'LIVING', 'ATTACHED_BED_BATH', 'STUDYROOM', 'STORAGE']
 
         for room in floor_rooms:
@@ -95,11 +31,9 @@ def build_connectivity_graph(rooms):
                     graph[kdl_hub['id']].append(room['id'])
                     graph[room['id']].append(kdl_hub['id'])
 
-    # Rule 2: HALL <-> adjacent rooms (KDL, STAIR, BSP rooms)
     for hall in hallways:
         floor_rooms = rooms_by_floor[hall['floor']]
-        # HALL connects to KDL_HUB, STAIR, and BSP rooms
-        connectable_types = ['KITCHEN_LIVING_DINING_HUB', 'STAIR', 'LIVING', 'ATTACHED_BED_BATH', 'STUDYROOM', 'STORAGE']
+        connectable_types = ['KDL_HUB', 'STAIR', 'LIVING', 'ATTACHED_BED_BATH', 'STUDYROOM', 'STORAGE']
 
         for room in floor_rooms:
             if room['type'] in connectable_types and room['id'] != hall['id']:
@@ -107,41 +41,18 @@ def build_connectivity_graph(rooms):
                     graph[hall['id']].append(room['id'])
                     graph[room['id']].append(hall['id'])
 
-    # Rule 3: STAIR <-> STAIR (vertical only, same x/y)
-    # This is handled by add_stairway_connections function
-
-    # Rule 4: STAIR <-> HALL (if adjacent on same floor)
     for stair in stairways:
-        for hall in hallways:
-            if stair['floor'] == hall['floor'] and are_adjacent(stair, hall):
-                graph[stair['id']].append(hall['id'])
-                graph[hall['id']].append(stair['id'])
+        if stair['type'] == 'STAIR':
+            for other_stair in stairways:
+                if other_stair != stair and are_adjacent_stairs(stair, other_stair):
+                    graph[stair['id']].append(other_stair['id'])
 
-    # Add vertical stair connections
-    add_stairway_connections(graph, rooms)
-
-    # IMPORTANT: Do NOT add any BSP ↔ BSP connections or implicit bedroom connections
-    # Only the explicit rules above should create connections
-
-    return dict(graph)
-
+    return graph
 
 def are_adjacent(room1, room2):
-    """
-    Check if two rooms are adjacent (share a wall).
-
-    Args:
-        room1: First room dictionary
-        room2: Second room dictionary
-
-    Returns:
-        Boolean indicating if rooms are adjacent
-    """
-    # Must be on the same floor
     if room1['floor'] != room2['floor']:
         return False
 
-    # Calculate room boundaries
     r1_left = room1['x']
     r1_right = room1['x'] + room1['width']
     r1_top = room1['y']
@@ -152,100 +63,219 @@ def are_adjacent(room1, room2):
     r2_top = room2['y']
     r2_bottom = room2['y'] + room2['height']
 
-    # Check for adjacency with small tolerance for floating point precision
     tolerance = 0.1
 
-    # Check if they share a vertical edge (left or right sides touch)
-    vertical_adjacent = (
-        abs(r1_right - r2_left) < tolerance or
-        abs(r2_right - r1_left) < tolerance
+    horizontal_adj = (
+        abs(r1_bottom - r2_top) < tolerance or abs(r2_bottom - r1_top) < tolerance
     ) and (
-        # Check if they overlap vertically
-        (r1_top < r2_bottom - tolerance and r1_bottom > r2_top + tolerance) or
-        (r2_top < r1_bottom - tolerance and r2_bottom > r1_top + tolerance)
-    )
-
-    # Check if they share a horizontal edge (top or bottom sides touch)
-    horizontal_adjacent = (
-        abs(r1_bottom - r2_top) < tolerance or
-        abs(r2_bottom - r1_top) < tolerance
-    ) and (
-        # Check if they overlap horizontally
         (r1_left < r2_right - tolerance and r1_right > r2_left + tolerance) or
         (r2_left < r1_right - tolerance and r2_right > r1_left + tolerance)
     )
 
-    return vertical_adjacent or horizontal_adjacent
+    vertical_adj = (
+        abs(r1_right - r2_left) < tolerance or abs(r2_right - r1_left) < tolerance
+    ) and (
+        (r1_top < r2_bottom - tolerance and r1_bottom > r2_top + tolerance) or
+        (r2_top < r1_bottom - tolerance and r2_bottom > r1_top + tolerance)
+    )
 
+    return horizontal_adj or vertical_adj
 
-def add_stairway_connections(graph, rooms):
-    """
-    Add vertical connections between stairways on different floors.
+def are_adjacent_stairs(stair1, stair2):
+    if stair1['floor'] == stair2['floor']:
+        return False
 
-    Args:
-        graph: Adjacency graph to modify
-        rooms: List of all rooms
-    """
-    # Find all stairways
-    stairways = [room for room in rooms if room['type'] == 'STAIR']
+    tolerance = 5.0
 
-    # Group stairways by their (x, y) position
-    stairway_groups = defaultdict(list)
+    center1_x = stair1['x'] + stair1['width'] / 2
+    center1_y = stair1['y'] + stair1['height'] / 2
+    center2_x = stair2['x'] + stair2['width'] / 2
+    center2_y = stair2['y'] + stair2['height'] / 2
 
-    for stair in stairways:
-        # Round coordinates to handle floating point precision
-        key = (round(stair['x'], 1), round(stair['y'], 1))
-        stairway_groups[key].append(stair)
+    return abs(center1_x - center2_x) < tolerance and abs(center1_y - center2_y) < tolerance
 
-    # Connect stairways at the same position across floors
-    for position, stairs_at_pos in stairway_groups.items():
-        if len(stairs_at_pos) > 1:
-            # Sort by floor
-            stairs_at_pos.sort(key=lambda s: s['floor'])
+def validate_layout_with_bfs(graph, rooms, max_attempts=5):
+    if not graph or not rooms:
+        return False, ["No rooms or graph provided"]
 
-            # Connect consecutive floors
-            for i in range(len(stairs_at_pos) - 1):
-                current_stair = stairs_at_pos[i]
-                next_stair = stairs_at_pos[i + 1]
+    errors = []
 
-                # Add bidirectional connection
-                graph[current_stair['id']].append(next_stair['id'])
-                graph[next_stair['id']].append(current_stair['id'])
+    all_room_ids = {room['id'] for room in rooms}
+    visited = set()
+    components = []
 
+    for room_id in all_room_ids:
+        if room_id not in visited:
+            component = set()
+            queue = [room_id]
+
+            while queue:
+                current_id = queue.pop(0)
+                if current_id not in component:
+                    component.add(current_id)
+                    visited.add(current_id)
+                    queue.extend(graph.get(current_id, []))
+
+            components.append(component)
+
+    if len(components) > 4:
+        component_details = []
+        for i, component in enumerate(components):
+            room_details = []
+            for room_id in component:
+                room = next((r for r in rooms if r['id'] == room_id), None)
+                if room:
+                    room_details.append(f"{room['type']}(F{room['floor']})")
+            component_details.append(f"Component {i+1}: {', '.join(room_details)}")
+
+        return False, [f"Too many disconnections: {len(components)} separate components. " +
+                      f"Components: {'; '.join(component_details)}"]
+
+    return True, []
+
+def validate_connectivity(graph, rooms):
+    if not rooms:
+        return True, []
+
+    all_room_ids = {room['id'] for room in rooms}
+    visited = set()
+    components = []
+
+    for room_id in all_room_ids:
+        if room_id not in visited:
+            component = set()
+            queue = [room_id]
+
+            while queue:
+                current_id = queue.pop(0)
+                if current_id not in component:
+                    component.add(current_id)
+                    visited.add(current_id)
+                    queue.extend(graph.get(current_id, []))
+
+            components.append(component)
+
+    if len(components) > 4:
+        component_details = []
+        for i, component in enumerate(components):
+            room_details = []
+            for room_id in component:
+                room = next((r for r in rooms if r['id'] == room_id), None)
+                if room:
+                    room_details.append(f"{room['type']}(F{room['floor']})")
+            component_details.append(f"Component {i+1}: {', '.join(room_details)}")
+
+        return False, [f"Too many disconnections: {len(components)} separate components. " +
+                      f"Components: {'; '.join(component_details)}"]
+
+    return True, []
+
+def validate_kitchen_bath_rule(graph, rooms):
+    errors = []
+
+    kitchens = [room for room in rooms if room['type'] == 'KITCHEN']
+
+    for kitchen in kitchens:
+        kitchen_id = kitchen['id']
+        adjacent_rooms = graph.get(kitchen_id, [])
+
+        for adj_id in adjacent_rooms:
+            adj_room = next((r for r in rooms if r['id'] == adj_id), None)
+            if adj_room and adj_room['type'] == 'BATH':
+                errors.append(f"Kitchen on floor {kitchen['floor']} is directly connected to bathroom on floor {adj_room['floor']}")
+                break
+
+    return len(errors) == 0, errors
+
+def validate_bedroom_bath_rule(graph, rooms):
+    errors = []
+
+    bedrooms = [room for room in rooms if room['type'] == 'BEDROOM']
+
+    for bedroom in bedrooms:
+        bedroom_id = bedroom['id']
+        adjacent_rooms = graph.get(bedroom_id, [])
+
+        has_adjacent_bath = False
+        for adj_id in adjacent_rooms:
+            adj_room = next((r for r in rooms if r['id'] == adj_id), None)
+            if adj_room and adj_room['type'] == 'BATH':
+                has_adjacent_bath = True
+                break
+
+        if not has_adjacent_bath:
+            errors.append(f"Bedroom on floor {bedroom['floor']} has no adjacent bathroom")
+
+    return len(errors) == 0, errors
 
 def get_room_by_id(rooms, room_id):
-    """
-    Get room dictionary by ID.
-
-    Args:
-        rooms: List of room dictionaries
-        room_id: Room ID to find
-
-    Returns:
-        Room dictionary or None if not found
-    """
     for room in rooms:
         if room['id'] == room_id:
             return room
     return None
 
+def validate_room_distribution(rooms, floors, layout_case=None, length_m=None, width_m=None):
+    errors = []
 
-def print_graph(graph, rooms):
-    """
-    Debug function to print the connectivity graph.
+    room_counts = {}
+    for room in rooms:
+        room_type = room['type']
+        room_counts[room_type] = room_counts.get(room_type, 0) + 1
 
-    Args:
-        graph: Adjacency graph
-        rooms: List of room dictionaries
-    """
-    print("Room Connectivity Graph:")
-    for room_id, adjacents in graph.items():
-        room = get_room_by_id(rooms, room_id)
-        if room:
-            adj_rooms = []
-            for adj_id in adjacents:
-                adj_room = get_room_by_id(rooms, adj_id)
-                if adj_room:
-                    adj_rooms.append(f"{adj_room['type']}(F{adj_room['floor']})")
+    for floor in range(floors):
+        floor_bedrooms = [r for r in rooms if r['floor'] == floor and r['type'] == 'ATTACHED_BED_BATH']
+        if not floor_bedrooms:
+            errors.append(f"Floor {floor} has no attached bedrooms")
 
-            print(f"Room {room_id} ({room['type']} F{room['floor']}): {adj_rooms}")
+    for floor in range(floors):
+        floor_halls = [r for r in rooms if r['floor'] == floor and r['type'] == 'HALL']
+
+        skip_hallway_check = False
+
+        if layout_case == "SINGLE_SIDED_HALL" and floors > 1 and floor == 0:
+            skip_hallway_check = True
+        elif layout_case == "COMPACT" and floor == 0:
+            skip_hallway_check = True
+
+        if not skip_hallway_check and not floor_halls:
+            errors.append(f"Floor {floor} has no hallways")
+
+    kdl_count = room_counts.get('KITCHEN_LIVING_DINING_HUB', 0)
+    if kdl_count > 1:
+        errors.append(f"House has {kdl_count} KDL hubs, but only 1 is allowed")
+
+    if floors > 1:
+        for floor in range(floors-1):
+            floor_stairs = [r for r in rooms if r['floor'] == floor and r['type'] == 'STAIR']
+            if not floor_stairs:
+                errors.append(f"Floor {floor} has no stairway")
+
+    return len(errors) == 0, errors
+
+def comprehensive_validation(graph, rooms, floors, length_m=None, width_m=None, max_regeneration_attempts=3):
+    if length_m is not None and width_m is not None:
+        layout_case = detect_layout_case(length_m, width_m)
+    else:
+        layout_case = None
+
+    bfs_valid, bfs_errors = validate_layout_with_bfs(graph, rooms)
+    dist_valid, dist_errors = validate_room_distribution(rooms, floors, layout_case, length_m, width_m)
+
+    all_errors = bfs_errors + dist_errors
+    is_valid = bfs_valid and dist_valid
+
+    return {
+        'is_valid': is_valid,
+        'errors': all_errors,
+        'connectivity_valid': bfs_valid,
+        'distribution_valid': dist_valid,
+        'needs_regeneration': not is_valid
+    }
+
+def detect_layout_case(length_m, width_m):
+    if width_m > 70:
+        return "DOUBLE_SIDED_HALL"
+    elif width_m > 50:
+        return "SINGLE_SIDED_HALL"
+    else:
+        return "COMPACT"

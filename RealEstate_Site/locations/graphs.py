@@ -7,25 +7,25 @@ from .utilis import calculate_haversine
 
 
 class LocationGraph:
+    """
+    Graph for location navigation.
+    Format: {location_id: [(neighbor_id, distance), ...]}
+    """
     def __init__(self):
-        # Format: { location_id: [(neighbor_id, distance)] }
         self.adj_list = {}
-        
         self.nodes_data = {}
            
-    def add_location(self, location_obj : Location):
+    def add_location(self, location_obj):
         if location_obj.id not in self.adj_list:
             facility_record = Facility.objects.filter(location=location_obj).first()
             category = facility_record.type if facility_record else ""
-            
-            
             display_name = facility_record.name if facility_record else location_obj.name
-            
+
             self.adj_list[location_obj.id] = []
             self.nodes_data[location_obj.id] = {
                 "name": display_name,
                 "type": location_obj.location_type,
-                "category": category   
+                "category": category
             }
         
     def add_edge(self, loc_id1, loc_id2, distance):
@@ -69,48 +69,6 @@ class LocationGraph:
         
         return found_facilities
     
-    # def dijkstra_shortest_path(self, from_id, to_id):
-    #     pq = PriorityQueue()
-    #     pq.push(0,from_id) 
-
-    #     distances = {node: float('inf') for node in self.adj_list}
-    #     distances[from_id] = 0
-        
-    #     parent = {node: None for node in self.adj_list}
-        
-    #     visited = set()
-
-    #     while not pq.is_empty():
-    #         curr_dist, curr_id = pq.pop()
-            
-    #         if curr_id == to_id:
-    #             path = []
-    #             temp_id = to_id
-    #             while temp_id is not None:
-    #                 path.append(temp_id)
-    #                 temp_id = parent[temp_id]
-                
-    #             return {
-    #                 "distance": round(curr_dist, 2),
-    #                 "path": path[::-1] # ye list ko reverse karne ke liye (source --> destination)
-    #             }
-
-    #         if curr_id in visited:
-    #             continue
-    #         visited.add(curr_id)
-
-    #         for neighbor_id, weight in self.adj_list.get(curr_id, []):
-    #             if neighbor_id in visited:
-    #                 continue
-                    
-    #             new_dist = curr_dist + weight
-                
-    #             if new_dist < distances[neighbor_id]:
-    #                 distances[neighbor_id] = new_dist
-    #                 parent[neighbor_id] = curr_id
-    #                 pq.push(new_dist,neighbor_id)
-
-    #     return {"distance": float("inf"), "path": []}
     
     def dijkstra_shortest_path(self, from_id, to_id):
         pq = PriorityQueue()
