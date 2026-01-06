@@ -324,6 +324,38 @@ def distribute_bedrooms_across_floors(total_bedrooms, floors):
 
     return bedrooms_per_floor
 
+# def get_floor_room_requirements(total_rooms, bedrooms_per_floor, floors, current_floor):
+#     requirements = {
+#         'ATTACHED_BED_BATH': bedrooms_per_floor[current_floor],
+#         'STUDYROOM': 0,
+#         'STORAGE': 0,
+#         'LIVING': 0
+#     }
+
+#     if floors >= 3:
+#         if current_floor == floors - 1:
+#             requirements['STORAGE'] = 1
+#         elif current_floor == 1:
+#             requirements['STUDYROOM'] = 1
+#     elif floors == 2:
+#         if current_floor == 1:
+#             requirements['STUDYROOM'] = 1
+#             requirements['STORAGE'] = 1
+
+#     used_slots = (requirements['ATTACHED_BED_BATH'] +
+#                   requirements['STUDYROOM'] +
+#                   requirements['STORAGE'])
+
+#     if current_floor == 0:
+#         requirements['LIVING'] = 0
+#     else:
+#         remaining_house_rooms = total_rooms - sum(bedrooms_per_floor)
+#         if floors > 1:
+#             living_per_upper_floor = remaining_house_rooms // (floors - 1)
+#             requirements['LIVING'] = max(0, living_per_upper_floor - used_slots + requirements['ATTACHED_BED_BATH'] + requirements['STUDYROOM'] + requirements['STORAGE'])
+
+#     return requirements
+
 def get_floor_room_requirements(total_rooms, bedrooms_per_floor, floors, current_floor):
     requirements = {
         'ATTACHED_BED_BATH': bedrooms_per_floor[current_floor],
@@ -332,27 +364,21 @@ def get_floor_room_requirements(total_rooms, bedrooms_per_floor, floors, current
         'LIVING': 0
     }
 
-    if floors >= 3:
-        if current_floor == floors - 1:
-            requirements['STORAGE'] = 1
-        elif current_floor == 1:
-            requirements['STUDYROOM'] = 1
-    elif floors == 2:
-        if current_floor == 1:
-            requirements['STUDYROOM'] = 1
-            requirements['STORAGE'] = 1
-
-    used_slots = (requirements['ATTACHED_BED_BATH'] +
-                  requirements['STUDYROOM'] +
-                  requirements['STORAGE'])
-
     if current_floor == 0:
-        requirements['LIVING'] = 0
+            requirements['STUDYROOM'] = 1
+            requirements['STORAGE'] = 1
     else:
+        if floors >= 3 and current_floor == floors - 1:
+            requirements['STORAGE'] = 1
+
+    if current_floor > 0:
         remaining_house_rooms = total_rooms - sum(bedrooms_per_floor)
         if floors > 1:
             living_per_upper_floor = remaining_house_rooms // (floors - 1)
-            requirements['LIVING'] = max(0, living_per_upper_floor - used_slots + requirements['ATTACHED_BED_BATH'] + requirements['STUDYROOM'] + requirements['STORAGE'])
+            used_slots = (requirements['ATTACHED_BED_BATH'] +
+                         requirements['STUDYROOM'] +
+                         requirements['STORAGE'])
+            requirements['LIVING'] = max(0, living_per_upper_floor - used_slots)
 
     return requirements
 
