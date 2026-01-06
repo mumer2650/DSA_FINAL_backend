@@ -109,6 +109,15 @@ def create_structural_elements(length_m, width_m, floors, current_floor):
             )
             bsp_zones.append(right_bsp)
 
+            left_bsp = BSPNode(
+                x=0,
+                y=kdl_height_percent,
+                w=45,
+                h=bsp_height_percent,
+                floor=current_floor
+            )
+            bsp_zones.append(left_bsp)
+
         else:
             stair_height_percent = 20
             hallway = BSPNode(
@@ -313,8 +322,16 @@ def create_structural_elements(length_m, width_m, floors, current_floor):
             )
             bsp_zones.append(bottom_bsp)
 
-    return structural_regions, bsp_zones
+            upper_bsp_zone = BSPNode(
+                x=stair_hall_width_percent + stair_hall_width_percent,
+                y=0,
+                w=upper_bsp_width_percent,
+                h=stair_hall_height_percent,
+                floor=current_floor
+            )
+            bsp_zones.append(upper_bsp_zone)
 
+    return structural_regions, bsp_zones
 
 def distribute_bedrooms_across_floors(total_bedrooms, floors):
     if floors == 1:
@@ -551,7 +568,10 @@ def generate_house(request):
             # structural_reserve = max(1, floors)
             # available_rooms_for_bsp = max(1, total_rooms - structural_reserve)
 
-            target_rooms = max(1, int(total_rooms * zone_area_ratio / floors))
+            structural_reserve = max(1, floors)
+            available_rooms_for_bsp = max(1, total_rooms - structural_reserve)
+
+            target_rooms = max(1, int(available_rooms_for_bsp * zone_area_ratio / floors))
             print(f"Target rooms: {target_rooms} for zone {zone_idx} in floor {floor}")
             zone_regions = split_space(zone, target_rooms, min_room_length, min_room_width, scale_x, scale_y, detect_layout_case(length_m, width_m) )
 

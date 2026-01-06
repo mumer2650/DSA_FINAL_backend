@@ -72,7 +72,6 @@ class LocationGraph:
     
     def dijkstra_shortest_path(self, from_id, to_id):
         pq = PriorityQueue()
-        # FIX 1: Swap arguments to match (node_id, distance)
         pq.push(from_id, 0) 
 
         distances = {node: float('inf') for node in self.adj_list}
@@ -83,10 +82,8 @@ class LocationGraph:
         visited = set()
 
         while not pq.is_empty():
-            # FIX 2: Swap unpack order. pq.pop() returns (node_id, distance)
             curr_id, curr_dist = pq.pop() 
-            
-            # Optimization: If current path is already longer than best known, skip
+
             if curr_dist > distances[curr_id]:
                 continue
 
