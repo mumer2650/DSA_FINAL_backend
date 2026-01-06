@@ -375,29 +375,6 @@ def get_floor_room_requirements(total_rooms, bedrooms_per_floor, floors, current
 
     return requirements
 
-# def assign_staircase(regions, floors, current_floor):
-#     if floors <= 1 or current_floor == floors - 1:
-#         return None, None
-
-#     suitable_regions = [r for r in regions if r.room_type is None]
-
-#     if not suitable_regions:
-#         return None, None
-
-#     bottom_left_regions = [
-#         r for r in suitable_regions
-#         if r.x < 50 and (r.y + r.h) > 50
-#     ]
-
-#     if bottom_left_regions:
-#         stair_region = max(bottom_left_regions, key=lambda r: r.w * r.h)
-#     else:
-#         stair_region = max(suitable_regions, key=lambda r: r.w * r.h)
-
-#     stair_region.room_type = 'STAIR'
-#     stair_position = (round(stair_region.x, 1), round(stair_region.y, 1))
-
-#     return stair_region, stair_position
 
 def assign_kitchen(regions, scale_x, scale_y, kitchen_area):
     floor_0_regions = [r for r in regions if r.floor == 0 and r.room_type is None]
@@ -473,20 +450,6 @@ def assign_room_types_to_zone(zone_regions, floor, total_floors, zone_idx, floor
     return zone_regions, bedrooms_assigned_to_zone
 
 
-# def assign_hallway(regions):
-#     unassigned = [r for r in regions if r.room_type is None]
-#     if not unassigned:
-#         return None
-
-#     elongated_regions = [r for r in unassigned if r.w > r.h]
-
-#     if elongated_regions:
-#         hallway = max(elongated_regions, key=lambda r: r.w)
-#     else:
-#         hallway = max(unassigned, key=lambda r: r.w * r.h)
-
-#     hallway.room_type = 'HALL'
-#     return hallway
 
 def split_space(node, target_leaves, min_room_length_m, min_room_width_m, scale_x, scale_y):
     print(f"split_space called: zone size {node.w}x{node.h}, target_leaves={target_leaves}")
@@ -733,3 +696,42 @@ def generate_house(request):
 #     if len(kitchens) > 1:
 #         for kitchen in kitchens[1:]:
 #             kitchen['type'] = 'LIVING'
+
+# def assign_staircase(regions, floors, current_floor):
+#     if floors <= 1 or current_floor == floors - 1:
+#         return None, None
+
+#     suitable_regions = [r for r in regions if r.room_type is None]
+
+#     if not suitable_regions:
+#         return None, None
+
+#     bottom_left_regions = [
+#         r for r in suitable_regions
+#         if r.x < 50 and (r.y + r.h) > 50
+#     ]
+
+#     if bottom_left_regions:
+#         stair_region = max(bottom_left_regions, key=lambda r: r.w * r.h)
+#     else:
+#         stair_region = max(suitable_regions, key=lambda r: r.w * r.h)
+
+#     stair_region.room_type = 'STAIR'
+#     stair_position = (round(stair_region.x, 1), round(stair_region.y, 1))
+
+#     return stair_region, stair_position
+
+# def assign_hallway(regions):
+#     unassigned = [r for r in regions if r.room_type is None]
+#     if not unassigned:
+#         return None
+
+#     elongated_regions = [r for r in unassigned if r.w > r.h]
+
+#     if elongated_regions:
+#         hallway = max(elongated_regions, key=lambda r: r.w)
+#     else:
+#         hallway = max(unassigned, key=lambda r: r.w * r.h)
+
+#     hallway.room_type = 'HALL'
+#     return hallway
