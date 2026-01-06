@@ -8,13 +8,26 @@ class FavoriteHashMap:
 
     def _hash(self, key):
         return hash(key) % self.size
+    
+    def is_favorite(self, user_id, property_id):
+        fav_set = self.get_val(user_id)
+        if fav_set is None:
+            self.load_user_favorites(user_id)
+            fav_set = self.get_val(user_id)
+        
+        return property_id in fav_set if fav_set else False
 
-    def load_user_favorites(self, user_id):
-        fav_ids = Favorite.objects.filter(user_id=user_id).values_list('property_id', flat=True)
-        self.set_val(user_id, set(fav_ids))
+    def add_favorite(self, user_id, property_id):
+        fav_set = self.get_val(user_id)
+        if fav_set is None:
+            self.load_user_favorites(user_id)
+            fav_set = self.get_val(user_id)
+        
+        if fav_set is not None:
+            fav_set.add(property_id)
+
 
     def set_val(self, user_id, fav_set):
-        """Manually sets the value at the calculated index."""
         index = self._hash(user_id)
         bucket = self._storage[index]
         
@@ -34,22 +47,10 @@ class FavoriteHashMap:
                 return fset
         return None
 
-    def is_favorite(self, user_id, property_id):
-        fav_set = self.get_val(user_id)
-        if fav_set is None:
-            self.load_user_favorites(user_id)
-            fav_set = self.get_val(user_id)
-        
-        return property_id in fav_set if fav_set else False
-
-    def add_favorite(self, user_id, property_id):
-        fav_set = self.get_val(user_id)
-        if fav_set is None:
-            self.load_user_favorites(user_id)
-            fav_set = self.get_val(user_id)
-        
-        if fav_set is not None:
-            fav_set.add(property_id)
+            
+    def load_user_favorites(self, user_id):
+        fav_ids = Favorite.objects.filter(user_id=user_id).values_list('property_id', flat=True)
+        self.set_val(user_id, set(fav_ids))
 
     def remove_favorite(self, user_id, property_id):
         fav_set = self.get_val(user_id)
